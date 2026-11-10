@@ -1,6 +1,6 @@
 {
-  "name": "my-duffel",
-  "version": "0.16.9",
+  "name": "duffel",
+  "version": "1.0.0",
   "private": true,
   "description": "A family packing-list app you host yourself on Cloudflare.",
   "license": "MIT",

@@ -18,15 +18,15 @@
   "d1_databases": [
     {
       // No database_id: the Deploy button and `wrangler deploy` provision it automatically.
-      "binding": "DB",
+      "binding": "DB", "database_id": "cc35ae41-596f-48cb-92ef-a2065de77796",
       "database_name": "my-duffel",
-      "migrations_dir": "migrations","database_id": "cc35ae41-596f-48cb-92ef-a2065de77796",
+      "migrations_dir": "migrations",
     },
   ],
   "kv_namespaces": [
     {
       // Sign-ins for AI assistants connected over MCP. Provisioned automatically on deploy.
-      "binding": "OAUTH_KV","id": "897757a763b7495789234c817b498605",
+      "binding": "OAUTH_KV", "id": "897757a763b7495789234c817b498605",
     },
   ],
 }
