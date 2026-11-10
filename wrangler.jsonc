@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "my-duffel",
+  "main": "./src/worker/index.ts",
+  "compatibility_date": "2026-10-19",
+  // Needed for OAuth clients that identify themselves with a metadata URL.
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "observability": { "enabled": true },
+  // Hourly: the anonymous daily check-in (at most once a day; off switch in Settings), and
+  // notifications at 8 a.m. in each device's own time zone.
+  "triggers": { "crons": ["41 * * * *"] },
+  "upload_source_maps": true,
+  "assets": {
+    // Static SPA. Unknown paths fall back to index.html; /api/* always reaches the Worker.
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/mcp", "/mcp/*", "/authorize", "/oauth/*", "/.well-known/*"],
+  },
+  "d1_databases": [
+    {
+      // No database_id: the Deploy button and `wrangler deploy` provision it automatically.
+      "binding": "DB",
+      "database_name": "my-duffel",
+      "migrations_dir": "migrations","database_id": "cc35ae41-596f-48cb-92ef-a2065de77796",
+    },
+  ],
+  "kv_namespaces": [
+    {
+      // Sign-ins for AI assistants connected over MCP. Provisioned automatically on deploy.
+      "binding": "OAUTH_KV","id": "897757a763b7495789234c817b498605",
+    },
+  ],
+}

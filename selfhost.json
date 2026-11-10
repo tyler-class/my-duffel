@@ -1,0 +1,10 @@
+{
+  "app": "duffel",
+  "title": "Duffel",
+  "upstream": "tyler-class/Duffel",
+  "dataNote": "Your household's data lives in the database, not here, so it isn't touched.",
+  "email": "duffel@tylerclass.net",
+  "counted": "trips, items, bags and to-dos",
+  "files": false,
+  "push": true
+}

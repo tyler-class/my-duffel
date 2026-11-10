@@ -1,0 +1,423 @@
+<title>Duffel Design Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: review chrome on top; two phones of Direction A ("Quiet"), one forced light, one forced dark, driven by one shared state. */
+:root {
+  --page: #f3f3f1; --page-ink: #1d1c1a; --page-soft: #6f6c66; --page-line: #dfddd8; --page-card: #ffffff; --page-accent: #1f6f63;
+  --font-a: "Geist", ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --page: #121211; --page-ink: #ecebe8; --page-soft: #9a968f; --page-line: #2a2926; --page-card: #1a1a18; --page-accent: #5fb8a8; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --page: #121211; --page-ink: #ecebe8; --page-soft: #9a968f; --page-line: #2a2926; --page-card: #1a1a18; --page-accent: #5fb8a8; color-scheme: dark; }
+
+/* App tokens, scoped per phone so both themes show at once */
+.light {
+  --bg: #fafaf8; --surface: #ffffff; --ink: #1c1b19; --soft: #78746d; --faint: #a9a59e;
+  --line: #ecebe7; --accent: #1f6f63; --accent-ink: #ffffff; --accent-tint: #e3f0ed; --track: #ecebe7; --chip: #f2f1ee; --danger: #c4483c;
+  --p1: #4a7fd1; --p2: #8a63d2; --p3: #e0695a; --p4: #d49a2a;
+  color-scheme: light;
+}
+.dark {
+  --bg: #141413; --surface: #1c1c1a; --ink: #edece8; --soft: #9b978f; --faint: #67645e;
+  --line: #2a2926; --accent: #5fb8a8; --accent-ink: #0d1f1c; --accent-tint: #1b2e2a; --track: #2a2926; --chip: #242321; --danger: #e0786c;
+  --p1: #7aa5ea; --p2: #ad8ff0; --p3: #f08e80; --p4: #e7b858;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--page); color: var(--page-ink); font-family: var(--font-a);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--page-accent); outline-offset: 2px; }
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.intro h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; text-wrap: balance; }
+.intro p { margin: 0; color: var(--page-soft); font-size: 14px; max-width: 66ch; line-height: 1.5; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.ctl-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--page-soft); }
+.seg { display: inline-flex; border: 1px solid var(--page-line); border-radius: 8px; overflow: hidden; background: var(--page-card); flex-wrap: wrap; }
+.seg button { padding: 6px 12px; font-size: 13px; color: var(--page-soft); }
+.seg button + button { border-left: 1px solid var(--page-line); }
+.seg button[aria-pressed="true"] { color: var(--page-ink); background: var(--page); font-weight: 500; }
+.ctl-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 28px; justify-items: center; }
+.col { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 390px; min-width: 0; }
+.col h2 { font-size: 13px; font-weight: 500; margin: 0; color: var(--page-soft); text-transform: uppercase; letter-spacing: 0.08em; }
+.notes { margin: 0; padding-left: 18px; color: var(--page-soft); font-size: 14px; line-height: 1.6; max-width: 70ch; }
+
+.phone { position: relative; width: 100%; max-width: 390px; height: 800px; border-radius: 36px; overflow: hidden; border: 1px solid var(--page-line);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 18px 40px -20px rgba(0,0,0,.25);
+  background: var(--bg); color: var(--ink); font-family: var(--font-a); }
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.status { height: 44px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; font-size: 13px; font-weight: 600; }
+.ico { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.ico.sm { width: 14px; height: 14px; }
+.ico.xs { width: 13px; height: 13px; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+.trips { display: flex; gap: 18px; padding: 4px 20px 0; overflow-x: auto; font-size: 14px; scrollbar-width: none; }
+.trips button { color: var(--soft); padding: 6px 0; white-space: nowrap; border-bottom: 1.5px solid transparent; display: inline-flex; gap: 6px; align-items: center; }
+.trips button[aria-current="true"] { color: var(--ink); border-color: var(--ink); font-weight: 500; }
+.trips .more { color: var(--faint); }
+.hdr { padding: 20px 20px 8px; display: flex; flex-direction: column; gap: 8px; }
+.hdr-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.title { font-size: 28px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0; display: flex; align-items: center; gap: 10px; }
+.title .ico { width: 22px; height: 22px; color: var(--soft); }
+.meta { color: var(--soft); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.meta span { display: inline-flex; align-items: center; gap: 5px; }
+.iconbtn { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--soft); }
+.prog { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.bar { flex: 1; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); transition: width .25s ease; }
+.count { font-family: var(--font-mono); font-size: 12px; color: var(--soft); display: inline-flex; gap: 10px; }
+.count span { display: inline-flex; gap: 4px; align-items: center; }
+.filters { display: flex; flex-direction: column; gap: 10px; padding: 14px 20px 4px; }
+.tabrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tabs { display: flex; gap: 2px; background: var(--chip); padding: 3px; border-radius: 9px; min-width: 0; }
+.tabs button { flex: 1; font-size: 13px; padding: 5px 2px; border-radius: 7px; color: var(--soft); white-space: nowrap; text-align: center; }
+.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.tabs button.on-carry[aria-pressed="true"] { color: var(--accent); }
+.grouprow { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--faint); }
+.grouprow button { color: var(--soft); padding: 2px 0; border-bottom: 1.5px solid transparent; }
+.grouprow button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); font-weight: 500; }
+.grouprow .reset { margin-left: auto; color: var(--accent); border: 0; font-size: 13px; }
+.group { padding: 0 20px; margin-top: 22px; }
+.ghead { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.gname { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.01em; }
+.gname .chev { color: var(--faint); transition: transform .15s; }
+.gname[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.gicon { color: var(--soft); display: inline-flex; }
+.btag { font-size: 11px; font-weight: 500; color: var(--accent); background: var(--accent-tint); border-radius: 4px; padding: 1px 6px; letter-spacing: 0; }
+.fhint { font-size: 12px; color: var(--faint); }
+.gcount { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+.gadd { width: 26px; height: 26px; display: grid; place-items: center; color: var(--soft); border-radius: 50%; }
+.row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
+.chk { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--faint); flex: none; display: grid; place-items: center; transition: background .15s, border-color .15s; }
+.row.done .chk { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.cat { width: 30px; height: 30px; border-radius: 8px; background: var(--chip); color: var(--soft); display: grid; place-items: center; flex: none; transition: opacity .15s; }
+.row.done .cat { opacity: .45; }
+.rbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rname { font-size: 16px; line-height: 1.25; }
+.row.done .rname { color: var(--faint); text-decoration: line-through; text-decoration-thickness: 1px; }
+.rsub { font-size: 13px; color: var(--soft); display: flex; gap: 10px; align-items: center; white-space: nowrap; overflow: hidden; }
+.rsub > span { display: inline-flex; gap: 4px; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.flags { display: inline-flex; gap: 6px; color: var(--soft); flex: none; }
+.flag { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; }
+.flag.carry { background: var(--accent-tint); color: var(--accent); }
+.flag.nobag { border: 1px dashed var(--faint); color: var(--soft); }
+.qty { font-family: var(--font-mono); font-size: 13px; color: var(--soft); flex: none; min-width: 28px; text-align: right; }
+.row.done .qty, .row.done .flags { opacity: .5; }
+.collapsed { color: var(--faint); font-size: 13px; padding: 10px 0; }
+.tabbar { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--bg); padding: 8px 0 26px; }
+.tabbar button { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--faint); }
+.tabbar button[aria-current="true"] { color: var(--ink); }
+.section-label { font-size: 12px; color: var(--soft); text-transform: uppercase; letter-spacing: 0.08em; padding: 24px 20px 8px; display: flex; gap: 6px; align-items: center; }
+.trow { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
+.trow .rbody { gap: 6px; }
+.ttile { width: 40px; height: 40px; border-radius: 10px; background: var(--chip); color: var(--soft); display: grid; place-items: center; flex: none; }
+.ttile.active { background: var(--accent-tint); color: var(--accent); }
+.mini { height: 2px; background: var(--track); border-radius: 2px; overflow: hidden; width: 100%; }
+.mini i { display: block; height: 100%; background: var(--accent); }
+.primary { background: var(--ink); color: var(--bg); border-radius: 10px; padding: 10px 14px; font-size: 15px; font-weight: 500; display: inline-flex; gap: 6px; align-items: center; }
+.ghost { color: var(--soft); padding: 10px 12px; font-size: 15px; }
+.scrim { position: absolute; inset: 0; background: rgba(20,20,18,.32); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 18px 18px 0 0; padding: 10px 20px 30px; display: flex; flex-direction: column; gap: 4px; max-height: 90%; overflow-y: auto; }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line); align-self: center; margin-bottom: 8px; }
+.sheet h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; display: flex; gap: 8px; align-items: center; }
+.frow { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.frow > .ico { color: var(--faint); margin-top: 2px; }
+.fbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.flabel { font-size: 12px; color: var(--soft); }
+.input { font: inherit; font-size: 16px; color: var(--ink); background: transparent; border: 0; padding: 0; width: 100%; }
+.input:focus { outline: none; }
+.inline { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.stepper { display: inline-flex; align-items: center; gap: 12px; }
+.stepper button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; color: var(--soft); }
+.stepper b { font-family: var(--font-mono); font-weight: 500; font-size: 16px; min-width: 22px; text-align: center; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick { font-size: 14px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--soft); display: inline-flex; gap: 6px; align-items: center; }
+.pick[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
+.switch { width: 40px; height: 24px; border-radius: 12px; background: var(--track); position: relative; flex: none; transition: background .15s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(16px); }
+.actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 14px; }
+.danger { color: var(--danger); font-size: 15px; padding: 10px 0; display: inline-flex; gap: 6px; align-items: center; }
+.start { display: flex; flex-direction: column; border-top: 1px solid var(--line); margin-bottom: 4px; }
+.start button { display: flex; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); text-align: left; }
+.start .radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--faint); flex: none; }
+.start button[aria-pressed="true"] .radio { border: 5px solid var(--accent); }
+.start button[aria-pressed="true"] .ttile { background: var(--accent-tint); color: var(--accent); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.hint { font-size: 13px; color: var(--soft); display: inline-flex; gap: 6px; align-items: center; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 420px) { .phone { height: 740px; border-radius: 28px; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>Duffel: direction A, lighter icons</h1>
+    <p>Icons now appear only where they carry meaning: the trip details line, group headers, carry-on and no-suitcase badges, form fields and trip types. Item rows have no category icons, and collapsed groups show only their count. The left phone is light and the right is dark; both are clickable and stay in sync. The names are made-up sample data.</p>
+  </header>
+
+  <div class="controls">
+    <div class="ctl-group">
+      <span class="ctl-label">Screen</span>
+      <div class="seg" id="screenSeg">
+        <button data-screen="pack" aria-pressed="true">Pack</button>
+        <button data-screen="edit" aria-pressed="false">Edit item</button>
+        <button data-screen="trips" aria-pressed="false">Trips</button>
+        <button data-screen="new" aria-pressed="false">New trip</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="phones">
+    <section class="col"><h2>Light</h2><div class="phone light" id="phoneL"></div></section>
+    <section class="col"><h2>Dark</h2><div class="phone dark" id="phoneD"></div></section>
+  </div>
+
+  <ul class="notes">
+    <li>Item rows: checkbox, name, then a bag or person line underneath. No per-item icons.</li>
+    <li>Collapsed groups keep only the count on the right.</li>
+    <li>Bag options are explicit: a real bag, <b>No bag</b> (car seat, stroller: travels outside any bag) or <b>Decide later</b>. Grouped by bag, "No bag" and "No bag yet" are separate sections. "No bag" items never count as luggage or as unassigned.</li>
+    <li>Filters: two side-by-side switches, All / Packed / To pack and All / Carry-on / Luggage, which combine. A quiet "Group by Person · Bag" line sits below, with "Clear filters" when either switch isn't on All. Luggage leaves out carry-on and no-suitcase items.</li>
+    <li>Carry-on belongs to the bag, not the item. Each bag is marked carry-on or not, and an item counts as carry-on when it's in a carry-on bag. The edit sheet has no carry-on switch; picking a bag sets it. When grouped by bag, carry-on bags show a small "Carry-on" tag. When grouped by person, items in a carry-on bag show a small teal backpack badge. Things that never go in a suitcase (car seat, stroller) get a dashed badge.</li>
+    <li>Details line: calendar, nights, travelers and place icons. Trips list: a plane or car tile by trip type. The trip tabs and filters are text only.</li>
+    <li>Form fields in the edit and new-trip sheets each lead with an icon, so the sheet scans quickly.</li>
+  </ul>
+</div>
+
+<script>
+(function () {
+  function svg(d, cls) { return '<svg class="ico' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24">' + d + '</svg>'; }
+  var P = {
+    shirt: '<path d="M8 3l-5 3 2 4 3-1v12h8V9l3 1 2-4-5-3c-.5 1.5-2 2.5-4 2.5S8.5 4.5 8 3z"/>',
+    drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+    baby: '<circle cx="12" cy="8" r="4"/><path d="M10.5 8h.01M13.5 8h.01M6 21v-2a6 6 0 0 1 12 0v2"/>',
+    cup: '<path d="M7 8h10l-1 12H8L7 8zM9 8V5h6v3M10 3h4"/>',
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    pill: '<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 9.5l5 5"/>',
+    plug: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0V8zM12 17v4"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5zM4 19a2 2 0 0 1 2-2h13"/>',
+    seat: '<path d="M7 4h5l1 9h5l1 7H8L7 4zM9 20v1M17 20v1"/>',
+    nobag: '<rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 3l18 18"/>',
+    bag: '<rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M4 12h16"/>',
+    backpack: '<path d="M8 7V5a4 4 0 0 1 8 0v2"/><rect x="5" y="7" width="14" height="14" rx="3"/><path d="M9 14h6v3H9z"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    layers: '<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/>',
+    users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14a6 6 0 0 1 3 6"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    pin: '<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    plane: '<path d="M10.5 13.5L3 11l1.5-1.5 7.5 1 4.5-4.5a2 2 0 0 1 3 3L15 13.5l1 7.5-1.5 1.5-2.5-7.5-3 3v2.5L7.5 22l-1-3.5L3 17.5 4.5 16H7l3.5-2.5z"/>',
+    car: '<path d="M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16M3 16h18v3H3zM6.5 19v2M17.5 19v2"/><circle cx="7.5" cy="16" r=".5"/><circle cx="16.5" cy="16" r=".5"/>',
+    circle: '<circle cx="12" cy="12" r="8"/>',
+    list: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
+    map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>',
+    grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    swap: '<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>',
+    chev: '<path d="M6 9l6 6 6-6"/>',
+    tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9z"/><circle cx="8" cy="8" r="1.5"/>',
+    hash: '<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
+    note: '<path d="M5 3h10l4 4v14H5zM15 3v4h4M9 12h6M9 16h4"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    tmpl: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+    copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+    sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+    archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>',
+    upcoming: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+  };
+  function I(name, cls) { return svg(P[name], cls); }
+  var signal = '<svg width="42" height="12" viewBox="0 0 42 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2.5" width="3" height="9.5" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><rect x="24" y="1" width="16" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="1"/><rect x="26" y="3" width="11" height="6" rx="1"/></svg>';
+
+  var people = [{ id: 'p1', name: 'Sam', hue: 1 }, { id: 'p2', name: 'Alex', hue: 2 }, { id: 'p3', name: 'Mia', hue: 3 }, { id: 'p4', name: 'Leo', hue: 4 }];
+  var bags = [{ id: 'b1', name: 'Big checked', kind: 'bag' }, { id: 'b2', name: 'Kids’ suitcase', kind: 'bag' }, { id: 'b3', name: 'Sam carry-on', kind: 'carry' }, { id: 'b4', name: 'Alex backpack', kind: 'carry' }];
+  var items = [
+    ['T-shirts', 'shirt', 'p1', 'b1', 7], ['Shorts', 'shirt', 'p1', 'b1', 3], ['Swimsuit', 'sun', 'p1', 'b1', 2], ['Kindle', 'book', 'p1', 'b3', 1, 'carry'], ['Phone charger', 'plug', 'p1', 'b3', 1, 'carry'],
+    ['T-shirts', 'shirt', 'p2', 'b1', 7], ['Toiletry kit', 'drop', 'p2', 'b1', 1], ['Medications', 'pill', 'p2', 'b4', 1, 'carry'], ['Sunglasses', 'sun', 'p2', 'b4', 1, 'carry'],
+    ['Diapers', 'baby', 'p3', 'b2', 30, null, 'size 4'], ['Sippy cup', 'cup', 'p3', 'b2', 2], ['Headphones', 'plug', 'p3', 'b3', 1, 'carry'],
+    ['Sleep sack', 'moon', 'p4', 'b2', 1], ['Bottles', 'cup', 'p4', 'b2', 4], ['Diapers', 'baby', 'p4', 'b2', 50, null, 'newborn'],
+    ['Car seat', 'seat', null, 'none', 1], ['Stroller', 'seat', null, 'none', 1], ['Sunscreen', 'sun', null, 'b1', 1], ['Bottle soap', 'drop', null, 'b1', 1], ['Snacks', 'cup', null, null, 1]
+  ].map(function (r, i) {
+    return { id: 'i' + i, name: r[0], cat: r[1], person: r[2], bag: r[3], qty: r[4], carry: (bags.find(function (b) { return b.id === r[3]; }) || {}).kind === 'carry', nobag: r[3] === 'none', note: r[6] || '', packed: [0, 1, 3, 5, 9, 12].indexOf(i) >= 0 };
+  });
+
+  var S = { screen: 'pack', status: 'all', where: 'all', groupBy: 'person', collapsed: {}, carry: false, start: 'clone', who: 'p3', bag: 'b2', q: 30 };
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function person(id) { return people.find(function (p) { return p.id === id; }); }
+  function bagOf(id) { return bags.find(function (b) { return b.id === id; }); }
+  function dot(p) { return '<span class="dot" style="background:' + (p ? 'var(--p' + p.hue + ')' : 'var(--faint)') + '"></span>'; }
+  function bagIcon(b) { return I(b && b.kind === 'carry' ? 'backpack' : 'bag', 'xs'); }
+
+  function statusBar() { return '<div class="status"><span>9:41</span>' + signal + '</div>'; }
+  function tabbar(active) {
+    var t = [['pack', 'Pack', 'list'], ['trips', 'Trips', 'map'], ['catalog', 'Catalog', 'grid'], ['more', 'More', 'more']];
+    return '<nav class="tabbar">' + t.map(function (x) {
+      return '<button data-act="nav" data-to="' + x[0] + '" aria-current="' + (x[0] === active) + '">' + I(x[2]) + x[1] + '</button>';
+    }).join('') + '</nav>';
+  }
+
+  function rowHTML(it) {
+    var sub = [];
+    if (S.groupBy === 'person') {
+      var b = bagOf(it.bag);
+      if (b) sub.push('<span>' + bagIcon(b) + esc(b.name) + '</span>');
+      else if (it.nobag) sub.push('<span>' + I('nobag', 'xs') + 'No bag</span>');
+    }
+    else { var p = person(it.person); sub.push('<span>' + (p ? dot(p) + p.name : I('users', 'xs') + 'Shared') + '</span>'); }
+    if (it.note) sub.push('<span>' + esc(it.note) + '</span>');
+    var flags = '';
+    if (it.carry && S.groupBy === 'person') flags += '<span class="flag carry" title="Carry-on">' + I('backpack', 'sm') + '</span>';
+    return '<button class="row' + (it.packed ? ' done' : '') + '" data-act="toggle" data-id="' + it.id + '">' +
+      '<span class="chk">' + (it.packed ? I('check', 'sm') : '') + '</span>' +
+      '<span class="rbody"><span class="rname">' + esc(it.name) + '</span>' + (sub.length ? '<span class="rsub">' + sub.join('') + '</span>' : '') + '</span>' +
+      (flags ? '<span class="flags">' + flags + '</span>' : '') +
+      '<span class="qty">×' + it.qty + '</span></button>';
+  }
+
+  function packScreen() {
+    var list = items.filter(function (it) {
+      if (S.status === 'packed' && !it.packed) return false;
+      if (S.status === 'todo' && it.packed) return false;
+      if (S.where === 'carry' && !it.carry) return false;
+      if (S.where === 'luggage' && (it.carry || it.nobag)) return false;
+      return true;
+    });
+    var filtered = S.status !== 'all' || S.where !== 'all';
+    var done = items.filter(function (i) { return i.packed; }).length;
+    var carry = items.filter(function (i) { return i.carry; });
+    var carryDone = carry.filter(function (i) { return i.packed; }).length;
+    var pct = Math.round(done / items.length * 100);
+    var keys = S.groupBy === 'person' ? people.map(function (p) { return p.id; }).concat([null]) : bags.map(function (b) { return b.id; }).concat(['none', null]);
+    var groups = keys.map(function (k) {
+      var rows = list.filter(function (it) { return (S.groupBy === 'person' ? it.person : it.bag) === k; });
+      var label, mark;
+      if (S.groupBy === 'person') { var p = person(k); label = p ? p.name : 'Shared'; mark = p ? dot(p) : '<span class="gicon">' + I('users', 'sm') + '</span>'; }
+      else { var b = bagOf(k); label = b ? b.name : k === 'none' ? 'No bag' : 'No bag yet'; mark = '<span class="gicon">' + (b ? I(b.kind === 'carry' ? 'backpack' : 'bag', 'sm') : I(k === 'none' ? 'nobag' : 'layers', 'sm')) + '</span>'; }
+      var badge = S.groupBy === 'bag' && b && b.kind === 'carry' ? '<span class="btag">Carry-on</span>' : '';
+      var gk = S.groupBy + ':' + k, col = !!S.collapsed[gk];
+      if (!rows.length && filtered) return '';
+      var gd = rows.filter(function (r) { return r.packed; }).length;
+      return '<div class="group"><div class="ghead"><button class="gname" data-act="collapse" data-g="' + gk + '" aria-expanded="' + !col + '">' + mark + esc(label) + badge + '<span class="chev">' + I('chev', 'xs') + '</span></button>' +
+        '<span class="gcount tnum">' + gd + '/' + rows.length + '</span>' +
+        '<button class="gadd" aria-label="Add to ' + esc(label) + '" data-act="screen" data-to="edit">' + I('plus', 'sm') + '</button></div>' +
+        (col ? '' : rows.map(rowHTML).join('')) + '</div>';
+    }).join('');
+    function seg(key, opts) {
+      return '<div class="tabs" role="group">' + opts.map(function (t) {
+        return '<button class="' + (t[0] === 'carry' ? 'on-carry' : '') + '" data-act="filter" data-k="' + key + '" data-v="' + t[0] + '" aria-pressed="' + (S[key] === t[0]) + '">' + t[1] + '</button>';
+      }).join('') + '</div>';
+    }
+    var filterUI = '<div class="filters"><div class="tabrow">' +
+      seg('status', [['all', 'All'], ['packed', 'Packed'], ['todo', 'To pack']]) +
+      seg('where', [['all', 'All'], ['carry', 'Carry-on'], ['luggage', 'Luggage']]) + '</div>' +
+      '<div class="grouprow"><span>Group by</span>' +
+      '<button data-act="group" data-v="person" aria-pressed="' + (S.groupBy === 'person') + '">Person</button>' +
+      '<button data-act="group" data-v="bag" aria-pressed="' + (S.groupBy === 'bag') + '">Bag</button>' +
+      (filtered ? '<button class="reset" data-act="clear">Clear filters</button>' : '') + '</div></div>';
+    return statusBar() + '<div class="scroll">' +
+      '<div class="trips"><button aria-current="true">Lisbon</button><button>Tahoe</button><button class="more">Past (3)</button></div>' +
+      '<div class="hdr"><div class="hdr-top"><h1 class="title">Lisbon</h1><button class="iconbtn" aria-label="Trip menu">' + I('more') + '</button></div>' +
+      '<div class="meta"><span>' + I('cal', 'xs') + 'Dec 12 – 19</span><span>' + I('moon', 'xs') + '7 nights</span><span>' + I('users', 'xs') + '4</span><span>' + I('pin', 'xs') + 'Portugal</span></div>' +
+      '<div class="prog"><div class="bar"><i style="width:' + pct + '%"></i></div><span class="count tnum"><span>' + I('check', 'xs') + done + '/' + items.length + '</span><span>' + I('backpack', 'xs') + carryDone + '/' + carry.length + '</span></span></div></div>' +
+      filterUI + (groups || '<div class="collapsed" style="padding:32px 20px;text-align:center">Nothing matches these filters.</div>') + '<div style="height:28px"></div></div>' + tabbar('pack');
+  }
+
+  function frow(icon, inner) { return '<div class="frow">' + I(icon) + '<div class="fbody">' + inner + '</div></div>'; }
+
+  function editSheet(uid) {
+    var who = people.map(function (p) { return '<button class="pick" data-act="who" data-v="' + p.id + '" aria-pressed="' + (S.who === p.id) + '">' + dot(p) + p.name + '</button>'; }).join('') +
+      '<button class="pick" data-act="who" data-v="" aria-pressed="' + (S.who === '') + '">' + I('users', 'xs') + 'Shared</button>';
+    var bg = bags.map(function (b) { return '<button class="pick" data-act="bagpick" data-v="' + b.id + '" aria-pressed="' + (S.bag === b.id) + '">' + bagIcon(b) + esc(b.name) + '</button>'; }).join('') +
+      '<button class="pick" data-act="bagpick" data-v="none" aria-pressed="' + (S.bag === 'none') + '">' + I('nobag', 'xs') + 'No bag</button>' +
+      '<button class="pick" data-act="bagpick" data-v="" aria-pressed="' + (S.bag === '') + '">Decide later</button>';
+    var sel = bagOf(S.bag);
+    return '<div class="scrim" data-act="screen" data-to="pack"></div><div class="sheet"><div class="grab"></div><h3>Edit item</h3>' +
+      frow('tag', '<label class="flabel" for="nm-' + uid + '">Item</label><input class="input" id="nm-' + uid + '" value="Diapers">') +
+      frow('hash', '<div class="inline"><span class="flabel">Quantity <span class="tnum">· calculated 4/day</span></span><span class="stepper"><button data-act="q" data-v="-1" aria-label="Less">−</button><b>' + S.q + '</b><button data-act="q" data-v="1" aria-label="More">+</button></span></div>') +
+      frow('user', '<span class="flabel">For</span><div class="picks">' + who + '</div>') +
+      frow('bag', '<span class="flabel">Bag</span><div class="picks">' + bg + '</div><span class="fhint">' +
+        (sel ? (sel.kind === 'carry' ? 'Carry-on bag, so this item counts as carry-on.' : 'Checked bag.') : S.bag === 'none' ? 'Travels outside any bag, like a car seat or stroller.' : 'Shows under “No bag yet” until you pick one.') + '</span>') +
+      frow('note', '<label class="flabel" for="nt-' + uid + '">Notes</label><input class="input" id="nt-' + uid + '" value="size 4" placeholder="Size, brand, anything to remember">') +
+      '<div class="actions"><button class="danger">' + I('trash', 'sm') + 'Delete</button><div><button class="ghost" data-act="screen" data-to="pack">Cancel</button><button class="primary" data-act="screen" data-to="pack">Save</button></div></div></div>';
+  }
+
+  function tripsScreen() {
+    var up = [['Lisbon', 'plane', 'Dec 12 – 19', 6, 18, true], ['Tahoe', 'car', 'Jan 24 – 27', 0, 22]];
+    var past = [['Thanksgiving at Grandma’s', 'car', 'Nov 26 – 30', 31, 31], ['Beach week', 'plane', 'Aug 3 – 10', 44, 44], ['Chicago', 'plane', 'May 17 – 19', 19, 19]];
+    function row(r) {
+      return '<button class="trow" data-act="nav" data-to="pack"><span class="ttile' + (r[5] ? ' active' : '') + '">' + I(r[1]) + '</span><span class="rbody"><span class="rname">' + esc(r[0]) + '</span>' +
+        '<span class="rsub"><span>' + I('cal', 'xs') + r[2] + '</span><span class="tnum">' + I('check', 'xs') + r[3] + '/' + r[4] + '</span></span>' +
+        '<span class="mini"><i style="width:' + Math.round(r[3] / r[4] * 100) + '%"></i></span></span></button>';
+    }
+    return statusBar() + '<div class="scroll"><div class="hdr"><div class="hdr-top"><h1 class="title">Trips</h1><button class="primary" data-act="screen" data-to="new">' + I('plus', 'sm') + 'New trip</button></div></div>' +
+      '<div class="section-label">' + I('upcoming', 'xs') + 'Upcoming</div>' + up.map(row).join('') +
+      '<div class="section-label">' + I('archive', 'xs') + 'Past</div>' + past.map(row).join('') + '</div>' + tabbar('trips');
+  }
+
+  function newSheet(uid) {
+    var opts = [['template', 'From a template', 'Beach week, Ski trip, Weekend away', 'tmpl'], ['clone', 'Copy a past trip', 'Same list and bags, all unpacked', 'copy'], ['blank', 'Start blank', 'Add items as you go', 'sparkle']];
+    var start = '<div class="start">' + opts.map(function (o) {
+      return '<button data-act="start" data-v="' + o[0] + '" aria-pressed="' + (S.start === o[0]) + '"><span class="ttile">' + I(o[3]) + '</span><span class="rbody"><span class="rname">' + o[1] + '</span><span class="rsub">' + o[2] + '</span></span><span class="radio"></span></button>';
+    }).join('') + '</div>';
+    var src = S.start === 'clone' ? frow('copy', '<label class="flabel" for="src-' + uid + '">Copy from</label><input class="input" id="src-' + uid + '" value="Beach week · Aug 3 – 10">')
+      : S.start === 'template' ? frow('tmpl', '<label class="flabel" for="src-' + uid + '">Template</label><input class="input" id="src-' + uid + '" value="Beach week">') : '';
+    var who = people.map(function (p) { return '<button class="pick" aria-pressed="true">' + dot(p) + p.name + '</button>'; }).join('');
+    return '<div class="scrim" data-act="screen" data-to="trips"></div><div class="sheet"><div class="grab"></div><h3>New trip</h3>' + start +
+      frow('pin', '<label class="flabel" for="tn-' + uid + '">Name</label><input class="input" id="tn-' + uid + '" value="Lisbon">') + src +
+      frow('cal', '<div class="two"><div><label class="flabel" for="sd-' + uid + '">Leaving</label><input class="input" id="sd-' + uid + '" value="Dec 12"></div><div><label class="flabel" for="ed-' + uid + '">Back</label><input class="input" id="ed-' + uid + '" value="Dec 19"></div></div>') +
+      frow('users', '<span class="flabel">Travelers</span><div class="picks">' + who + '</div>') +
+      '<div class="actions"><span class="hint">' + I('moon', 'xs') + '7 nights · per-day items scale</span><button class="primary" data-act="screen" data-to="pack">Create</button></div></div>';
+  }
+
+  function render() {
+    [['phoneL', 'L'], ['phoneD', 'D']].forEach(function (x) {
+      var el = document.getElementById(x[0]);
+      var sc0 = el.querySelector('.scroll'), top = sc0 ? sc0.scrollTop : 0;
+      var html = S.screen === 'pack' ? packScreen() : S.screen === 'edit' ? packScreen() + editSheet(x[1]) : S.screen === 'trips' ? tripsScreen() : tripsScreen() + newSheet(x[1]);
+      el.innerHTML = '<div class="screen">' + html + '</div>';
+      var sc = el.querySelector('.scroll'); if (sc) sc.scrollTop = top;
+    });
+    document.querySelectorAll('#screenSeg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.screen === S.screen)); });
+  }
+
+  function onClick(e) {
+    var t = e.target.closest('[data-act]'); if (!t) return;
+    var a = t.dataset.act, v = t.dataset.v;
+    if (a === 'toggle') { var it = items.find(function (i) { return i.id === t.dataset.id; }); it.packed = !it.packed; }
+    else if (a === 'collapse') S.collapsed[t.dataset.g] = !S.collapsed[t.dataset.g];
+    else if (a === 'filter') S[t.dataset.k] = v;
+    else if (a === 'group') S.groupBy = v;
+    else if (a === 'clear') { S.status = 'all'; S.where = 'all'; }
+    else if (a === 'screen') S.screen = t.dataset.to;
+    else if (a === 'nav') { if (t.dataset.to === 'pack' || t.dataset.to === 'trips') S.screen = t.dataset.to; else return; }
+    else if (a === 'carry') S.carry = !S.carry;
+    else if (a === 'who') S.who = v;
+    else if (a === 'bagpick') S.bag = v;
+    else if (a === 'q') S.q = Math.max(0, S.q + Number(v));
+    else if (a === 'start') S.start = v;
+    else return;
+    render();
+  }
+  document.getElementById('phoneL').addEventListener('click', onClick);
+  document.getElementById('phoneD').addEventListener('click', onClick);
+  document.getElementById('screenSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.screen = b.dataset.screen; render(); });
+  render();
+})();
+</script>
