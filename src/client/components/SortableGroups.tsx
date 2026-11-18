@@ -26,7 +26,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { layoutGroups } from '@shared/logic';
 import { DragActive } from '../lib/dragActive';
-import { cx } from './ui';
+import { Icon } from './Icon';
+import { Collapse, cx, DragHandle } from './ui';
 
 const LOOSE = '';
 const rowId = (id: string) => `r:${id}`;
@@ -84,8 +85,8 @@ let quietUntil = 0;
 
 /**
  * A list of rows split into item groups (categories): rows with no group first, then
- * each group under a small heading. Rows and whole groups can be dragged into a new
- * order (long-press on touch screens); a row dropped in another group joins it.
+ * each group under a small heading. Rows and whole groups are dragged into a new order by
+ * their grip (press and hold on touch screens); a row dropped in another group joins it.
  */
 export function SortableGroups<T extends Sortable>(props: {
   rows: T[];
@@ -94,7 +95,8 @@ export function SortableGroups<T extends Sortable>(props: {
   /** Default group order for groups not saved yet. */
   defaults: readonly string[];
   disabled?: boolean;
-  renderRow: (row: T) => ReactNode;
+  /** handle is the row's grip, for the row to place (null while dragging is off). */
+  renderRow: (row: T, handle: ReactNode) => ReactNode;
   renderHeader: (category: string, rows: T[], collapsed: boolean) => ReactNode;
   /** Folded groups show only their heading. Tapping a heading folds or unfolds it. */
   isCollapsed?: (category: string) => boolean;
@@ -215,9 +217,13 @@ export function SortableGroups<T extends Sortable>(props: {
             {lists.rows[LOOSE]!.map((id) => {
               const r = byId.get(id);
               return r ? (
-                <SortableRow key={id} id={id} disabled={props.disabled}>
-                  {props.renderRow(r)}
-                </SortableRow>
+                <SortableRow
+                  key={id}
+                  id={id}
+                  name={rowName(r)}
+                  disabled={props.disabled}
+                  render={(h) => props.renderRow(r, h)}
+                />
               ) : null;
             })}
           </Box>
@@ -236,26 +242,37 @@ export function SortableGroups<T extends Sortable>(props: {
                   onToggle={props.onToggle && (() => props.onToggle!(c))}
                 >
                   {/* While a group moves, groups fold to their headings so they swap cleanly. */}
-                  <Box id={c} rows={lists.rows[c] ?? []} grow={draggingRow}>
+                  <Box
+                    id={c}
+                    rows={lists.rows[c] ?? []}
+                    grow={draggingRow}
+                    off={!!props.isCollapsed?.(c)}
+                  >
                     {!activeGroup &&
-                      !props.isCollapsed?.(c) &&
                       groupRows.map((r) => (
-                        <SortableRow key={r.id} id={r.id} disabled={props.disabled}>
-                          {props.renderRow(r)}
-                        </SortableRow>
+                        <SortableRow
+                          key={r.id}
+                          id={r.id}
+                          name={rowName(r)}
+                          // A folded group's rows stay out of the way of drops.
+                          disabled={props.disabled || !!props.isCollapsed?.(c)}
+                          render={(h) => props.renderRow(r, h)}
+                        />
                       ))}
                   </Box>
                 </SortableGroup>
               );
             })}
           </SortableContext>
-          <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.7,.3,1)' }}>
+          {/* No drop animation: the new order shows where the slot was. */}
+          <DragOverlay dropAnimation={null}>
             {activeRow ? (
-              <div className="rounded-xl bg-surface shadow-xl ring-1 ring-line">
-                {props.renderRow(activeRow)}
+              <div className="cursor-grabbing rounded-xl bg-surface shadow-xl ring-1 ring-line">
+                {props.renderRow(activeRow, <OverlayGrip />)}
               </div>
             ) : activeGroup ? (
-              <div className="rounded-xl bg-surface px-1 shadow-xl ring-1 ring-line">
+              <div className="flex cursor-grabbing items-center rounded-xl bg-surface px-1 shadow-xl ring-1 ring-line">
+                <OverlayGrip />
                 {props.renderHeader(
                   activeGroup,
                   (lists.rows[activeGroup] ?? [])
@@ -277,14 +294,17 @@ function Box({
   id,
   rows,
   grow,
+  off,
   children,
 }: {
   id: string;
   rows: string[];
   grow: boolean;
+  /** A folded group takes no drops. */
+  off?: boolean;
   children: ReactNode;
 }) {
-  const { setNodeRef } = useDroppable({ id: boxId(id) });
+  const { setNodeRef } = useDroppable({ id: boxId(id), disabled: off });
   return (
     <SortableContext items={rows.map(rowId)} strategy={verticalListSortingStrategy}>
       <div
@@ -306,36 +326,53 @@ const SLOT =
 
 function SortableRow({
   id,
+  name,
   disabled,
-  children,
+  render,
 }: {
   id: string;
+  name: string;
   disabled?: boolean;
-  children: ReactNode;
+  render: (handle: ReactNode) => ReactNode;
 }) {
-  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
-    id: rowId(id),
-    disabled,
-  });
+  const {
+    setNodeRef,
+    setActivatorNodeRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: rowId(id), disabled });
+  const handle = disabled ? null : (
+    <DragHandle
+      handleRef={setActivatorNodeRef}
+      label={`Drag ${name} to reorder`}
+      {...attributes}
+      {...listeners}
+    />
+  );
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      // Drag attributes only while dragging is on; otherwise the row would read as disabled.
-      {...(disabled ? {} : attributes)}
-      // The row holds its own buttons, so the wrapper is a group, not a button.
-      role="group"
-      {...listeners}
-      tabIndex={disabled ? undefined : attributes.tabIndex}
-      className={cx(
-        'relative touch-manipulation outline-none select-none [-webkit-touch-callout:none]',
-        isDragging && SLOT,
-      )}
+      className={cx('relative', isDragging && SLOT)}
     >
-      <div className={cx(isDragging && 'invisible')}>{children}</div>
+      <div className={cx(isDragging && 'invisible')}>{render(handle)}</div>
     </div>
   );
 }
+
+/** The grip on the lifted copy under the pointer: just the picture. */
+function OverlayGrip() {
+  return (
+    <span className="grid h-8 w-6 flex-none place-items-center text-faint">
+      <Icon name="grip" size={16} />
+    </span>
+  );
+}
+
+const rowName = (r: Sortable) => ('name' in r && typeof r.name === 'string' ? r.name : 'item');
 
 function SortableGroup({
   category,
@@ -368,21 +405,34 @@ function SortableGroup({
       className={cx('relative', isDragging && SLOT)}
     >
       <div className={cx(isDragging && 'invisible')}>
-        <div
-          ref={setActivatorNodeRef}
-          {...(disabled ? {} : attributes)}
-          {...listeners}
-          tabIndex={disabled ? undefined : attributes.tabIndex}
-          aria-expanded={onToggle ? expanded : undefined}
-          onClick={onToggle}
-          className={cx(
-            'touch-manipulation outline-none select-none [-webkit-touch-callout:none]',
-            onToggle ? 'cursor-pointer' : !disabled && 'cursor-grab',
+        <div className="flex items-end">
+          {!disabled && (
+            <DragHandle
+              handleRef={setActivatorNodeRef}
+              label={`Drag ${category} to reorder`}
+              className="mb-0.5"
+              {...attributes}
+              {...listeners}
+            />
           )}
-        >
-          {header}
+          {/* The whole heading folds the group. */}
+          <div
+            role={onToggle ? 'button' : undefined}
+            tabIndex={onToggle ? 0 : undefined}
+            aria-expanded={onToggle ? expanded : undefined}
+            onClick={onToggle}
+            onKeyDown={(e) => {
+              if (onToggle && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                onToggle();
+              }
+            }}
+            className={cx('min-w-0 flex-1 select-none', onToggle && 'cursor-pointer')}
+          >
+            {header}
+          </div>
         </div>
-        {children}
+        {onToggle ? <Collapse open={expanded}>{children}</Collapse> : children}
       </div>
     </div>
   );

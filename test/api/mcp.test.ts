@@ -2,6 +2,7 @@ import { SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { ORIGIN, PASSWORD, session } from './helpers';
 import { EXAMPLE_PROMPTS, MCP_PROMPTS } from '../../src/shared/examples';
+import pkg from '../../package.json';
 
 const REDIRECT = 'https://client.example/callback';
 
@@ -151,9 +152,14 @@ describe('MCP', () => {
       clientInfo: { name: 'test', version: '1' },
     });
     expect(init.status).toBe(200);
+    // The server reports the app's own version.
+    expect((init.data.result as { serverInfo?: { version?: string } }).serverInfo?.version).toBe(
+      pkg.version,
+    );
     const instructions = (init.data.result as { instructions?: string }).instructions ?? '';
     expect(instructions).toContain('call get_started');
     expect(instructions).toContain(EXAMPLE_PROMPTS[0]!.prompt);
+    expect(instructions).toContain('search_archive');
     const tools = await rpc(token!, 'tools/list');
     expect(tools.data.result!.tools!.map((t) => t.name)).toEqual(
       expect.arrayContaining([
@@ -165,6 +171,8 @@ describe('MCP', () => {
         'create_trip',
         'save_trip_as_template',
         'search_catalog',
+        'search_archive',
+        'restore_archived',
         'list_todos',
         'add_todos',
         'update_todo',
@@ -475,6 +483,29 @@ describe('MCP', () => {
     expect(conns.connections.map((c) => c.name)).toContain('Test Assistant');
     expect((await api.post('/connections/revoke-all')).status).toBe(200);
     expect((await rpc(token!, 'tools/list')).status).toBe(401);
+  });
+
+  it('finds archived things with search_archive and brings them back', async () => {
+    const api = await session();
+    await api.post('/sample-data');
+    const { token } = await connect();
+    const call = async (name: string, args: object) => {
+      const r = (await rpc(token!, 'tools/call', { name, arguments: args })).data.result!;
+      return { error: !!r.isError, text: r.content![0]!.text };
+    };
+    const items = (await api.get<{ items: { id: string; name: string }[] }>('/state')).data.items;
+    const item = items[0]!;
+    await api.patch(`/items/${item.id}`, { archived: true });
+    expect((await call('search_catalog', { query: item.name })).text).not.toContain(item.id);
+    const found = JSON.parse((await call('search_archive', { query: item.name })).text) as {
+      note: string;
+      catalog_items: { id: string; archived: boolean }[];
+    };
+    expect(found.note).toContain('restore_archived');
+    expect(found.catalog_items).toContainEqual(expect.objectContaining({ id: item.id }));
+    const back = await call('restore_archived', { kind: 'catalog_item', name: item.id });
+    expect(back.error).toBe(false);
+    expect((await call('search_catalog', { query: item.name })).text).toContain(item.id);
   });
 
   it('does not issue a token for a wrong password', async () => {

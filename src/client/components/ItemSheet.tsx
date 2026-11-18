@@ -3,7 +3,7 @@ import type { Item, Person, TripBag, TripItem } from '@shared/types';
 import { calcQty, displayQty, resolveCalc, rowCalc } from '@shared/logic';
 import { QTY_MODE_LABELS } from '@shared/lookups';
 import { Icon } from './Icon';
-import { SelectSheet } from './fields';
+import { GroupField, NotesField } from './fields';
 import {
   DangerButton,
   ErrorText,
@@ -242,16 +242,12 @@ function ItemSheetBody(props: ItemSheetProps) {
               ))}
           </datalist>
         </FieldRow>
-        <FieldRow icon="grid" label="Group" htmlFor="item-group">
-          <SelectSheet
-            id="item-group"
-            title="Group"
-            value={draft.category !== undefined ? draft.category : (match?.category ?? null)}
-            onChange={(category) => set({ category })}
-            options={props.categories}
-            placeholder="No group"
-          />
-        </FieldRow>
+        <GroupField
+          id="item-group"
+          value={draft.category !== undefined ? draft.category : (match?.category ?? null)}
+          onChange={(category) => set({ category })}
+          options={props.categories}
+        />
         <FieldRow icon="hash" hint={qtyHint}>
           <div className="flex flex-col gap-2.5">
             <div className="flex items-center justify-between gap-3">
@@ -369,14 +365,7 @@ function ItemSheetBody(props: ItemSheetProps) {
             </Pick>
           </div>
         </FieldRow>
-        <FieldRow icon="note" label="Notes" htmlFor="item-notes">
-          <TextInput
-            id="item-notes"
-            value={draft.notes}
-            placeholder="Size, brand, anything to remember"
-            onChange={(e) => set({ notes: e.target.value })}
-          />
-        </FieldRow>
+        <NotesField id="item-notes" value={draft.notes} onChange={(notes) => set({ notes })} />
         <button type="submit" hidden />
         <div className="pt-3">
           <ErrorText>{error}</ErrorText>

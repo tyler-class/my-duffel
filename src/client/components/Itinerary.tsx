@@ -25,7 +25,16 @@ import {
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import type { SectionKind } from '@shared/lookups';
 import {
   connections,
@@ -46,7 +55,14 @@ import { api, errorMessage } from '../lib/api';
 import { deliverPdf, itineraryPdf, openPdfTab, preparePdf, sharesPdf } from '../lib/printItinerary';
 import { DragActive } from '../lib/dragActive';
 import { formatDay, formatRange } from '../lib/format';
-import { deviceZone, formatClock, homeTime, likelyZone, zoneName } from '../lib/itinerary';
+import {
+  deviceZone,
+  formatClock,
+  homeTime,
+  likelyZone,
+  timeRange,
+  zoneName,
+} from '../lib/itinerary';
 import { load, save } from '../lib/storage';
 import { keys } from '../lib/queries';
 import { draftOf, EntrySheet, KIND_ICONS, MODE_ICONS, type EntryDraft } from './EntrySheet';
@@ -56,6 +72,7 @@ import { useToast } from './Toast';
 import {
   cx,
   DangerButton,
+  DragHandle,
   ErrorText,
   FieldRow,
   GhostButton,
@@ -63,6 +80,7 @@ import {
   PrimaryButton,
   Sheet,
   SlideToggle,
+  TextArea,
   TextInput,
 } from './ui';
 
@@ -551,16 +569,25 @@ export function TripItinerary({ detail, stage }: { detail: TripDetail; stage: St
                 );
               })}
             </SortableContext>
-            <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.7,.3,1)' }}>
+            {/* No drop animation: the new order shows where the slot was. */}
+            <DragOverlay dropAnimation={null}>
               {activeEntry ? (
-                <div className="rounded-xl bg-surface shadow-xl ring-1 ring-line">
-                  <EntryRow
-                    row={rowsOf([activeEntry])[0]!}
-                    clock={clock}
-                    next={false}
-                    onOpen={() => undefined}
-                    onCopy={() => undefined}
-                  />
+                <div className="cursor-grabbing rounded-xl bg-surface shadow-xl ring-1 ring-line">
+                  <EntryHandle.Provider
+                    value={
+                      <span className="-my-1 grid h-8 w-6 flex-none place-items-center text-faint">
+                        <Icon name="grip" size={16} />
+                      </span>
+                    }
+                  >
+                    <EntryRow
+                      row={rowsOf([activeEntry])[0]!}
+                      clock={clock}
+                      next={false}
+                      onOpen={() => undefined}
+                      onCopy={() => undefined}
+                    />
+                  </EntryHandle.Provider>
                 </div>
               ) : null}
             </DragOverlay>
@@ -647,9 +674,15 @@ function SortableSection({
   draggingEntry: boolean;
   children: ReactNode;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: sectionKey(s.id),
-  });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: sectionKey(s.id) });
   const { setNodeRef: setBoxRef } = useDroppable({ id: boxKey(s.id) });
   return (
     <section
@@ -660,13 +693,14 @@ function SortableSection({
         isDragging && 'z-20 opacity-90 [&>div:first-child]:shadow-lg',
       )}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        role="group"
-        aria-roledescription="Section you can drag to reorder"
-        className="flex touch-manipulation items-center gap-2 rounded-2xl bg-chip py-1.5 pr-1.5 pl-3.5 select-none break-after-avoid"
-      >
+      <div className="flex items-center gap-2 rounded-2xl bg-chip py-1.5 pr-1.5 pl-1.5 break-after-avoid">
+        <DragHandle
+          handleRef={setActivatorNodeRef}
+          label={`Drag ${s.title} to reorder`}
+          className="print:hidden"
+          {...attributes}
+          {...listeners}
+        />
         <button
           className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
           onClick={onEdit}
@@ -704,6 +738,9 @@ interface EntryLineProps {
   after?: ReactNode;
   children: ReactNode;
 }
+
+/** The grip of the entry line being drawn, for EntryRow to place. */
+const EntryHandle = createContext<ReactNode>(null);
 
 /** One line you can hold and drag (a check-out line stays put: it follows its check-in). */
 function SortableEntry({
@@ -757,17 +794,19 @@ function DraggableEntry({
     >
       <div className={cx(isDragging && 'invisible')}>
         {head}
-        <div
-          ref={setActivatorNodeRef}
-          {...attributes}
-          // The line holds its own buttons, so it's a group, not a button.
-          role="group"
-          aria-roledescription="Entry you can drag to reorder"
-          {...listeners}
-          className="touch-manipulation outline-none select-none [-webkit-touch-callout:none]"
+        <EntryHandle.Provider
+          value={
+            <DragHandle
+              handleRef={setActivatorNodeRef}
+              label="Drag to reorder"
+              className="-my-1 print:hidden"
+              {...attributes}
+              {...listeners}
+            />
+          }
         >
           {children}
-        </div>
+        </EntryHandle.Provider>
         {after}
       </div>
     </div>
@@ -836,12 +875,13 @@ function EntryRow({
       if (bits.length) lines.push(<span key="t">{bits.join(' · ')}</span>);
     }
   } else if (e.kind === 'plan') {
-    const time = [timeText(e.start, clock), timeText(e.end, clock)].filter(Boolean).join(' – ');
+    const time = timeRange(timeText(e.start, clock), timeText(e.end, clock));
     const where = e.start.place;
     if (time || where) lines.push(<span key="t">{[time, where].filter(Boolean).join(' · ')}</span>);
   }
   const out = row.part === 'out';
   const minutes = e.kind === 'transport' ? entryMinutes(e) : null;
+  const handle = useContext(EntryHandle);
   const statusQuery =
     e.kind === 'transport' && e.mode === 'plane' && e.carrier && e.number
       ? `${e.carrier} ${e.number} flight status`
@@ -858,7 +898,7 @@ function EntryRow({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <button className="flex min-w-0 flex-col gap-0.5 text-left" onClick={onOpen}>
           <span className="flex items-center gap-2">
-            <span className={cx('min-w-0 truncate text-base leading-tight', out && 'text-soft')}>
+            <span className={cx('min-w-0 text-base leading-tight break-words', out && 'text-soft')}>
               {lead && <span className="text-soft">{lead} · </span>}
               {entryName(e)}
             </span>
@@ -882,7 +922,7 @@ function EntryRow({
             <span className="text-[13px] whitespace-pre-line text-soft">{e.notes}</span>
           )}
           {!out && e.kind !== 'note' && (e.details || e.notes) && (
-            <span className="truncate text-[13px] text-faint print:whitespace-normal">
+            <span className="text-[13px] break-words text-faint">
               {[e.details, e.notes].filter(Boolean).join(' · ')}
             </span>
           )}
@@ -912,6 +952,7 @@ function EntryRow({
           </span>
         )}
       </div>
+      {handle}
     </div>
   );
 }
@@ -1038,7 +1079,7 @@ function SectionSheetBody({
           />
         </FieldRow>
         <FieldRow icon="note" label="Notes" htmlFor="section-notes">
-          <TextInput
+          <TextArea
             id="section-notes"
             value={notes}
             placeholder="Optional"

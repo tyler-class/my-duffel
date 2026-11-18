@@ -22,6 +22,7 @@ import {
   Sheet,
   SlideToggle,
   TextInput,
+  TextArea,
 } from './ui';
 
 export interface TodoDraft extends TodoWhen {
@@ -194,13 +195,12 @@ function TodoSheetBody({ initial, editing, trip, onClose, onSave, onDelete }: Pr
           </div>
         </FieldRow>
         <FieldRow icon="note" label="Notes" htmlFor="todo-notes">
-          <textarea
+          <TextArea
             id="todo-notes"
-            rows={3}
+            rows={2}
             value={d.notes}
             placeholder="Details, links, confirmation numbers"
             onChange={(e) => set({ notes: e.target.value })}
-            className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink transition-colors placeholder:text-faint/55 focus:border-accent focus:outline-none"
           />
         </FieldRow>
         <button type="submit" hidden />

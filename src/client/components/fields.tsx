@@ -2,7 +2,60 @@ import { useId, useState, type ReactNode } from 'react';
 import type { Person } from '@shared/types';
 import { packLabel, type PackChoice } from '@shared/logic';
 import { Icon } from './Icon';
-import { Pick, PersonDot, Sheet, TextInput, cx } from './ui';
+import { FieldRow, Pick, PersonDot, Sheet, TextArea, TextInput, cx } from './ui';
+
+// Fields every item editor shares (Pack's ItemSheet, Templates' TemplateItemSheet, Catalog's
+// ItemForm), so an item's group and notes are changed the same way wherever it appears.
+
+/** An item's group (category), picked from the household's groups. */
+export function GroupField({
+  id,
+  value,
+  onChange,
+  options,
+}: {
+  id: string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+  options: string[];
+}) {
+  return (
+    <FieldRow icon="grid" label="Group" htmlFor={id}>
+      <SelectSheet
+        id={id}
+        title="Group"
+        value={value}
+        onChange={onChange}
+        options={options}
+        placeholder="No group"
+      />
+    </FieldRow>
+  );
+}
+
+/** An item's notes: grows with the text. */
+export function NotesField({
+  id,
+  value,
+  onChange,
+  placeholder = 'Size, brand, anything to remember',
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <FieldRow icon="note" label="Notes" htmlFor={id}>
+      <TextArea
+        id={id}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </FieldRow>
+  );
+}
 
 /** Free text with suggestions. */
 export function Combo({

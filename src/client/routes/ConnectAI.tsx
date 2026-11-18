@@ -4,8 +4,10 @@ import { api, errorMessage } from '../lib/api';
 import { EXAMPLE_PROMPTS } from '@shared/examples';
 import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
+import { load, save } from '../lib/storage';
 import {
-  cx,
+  Collapse,
+  FoldChevron,
   ErrorText,
   GhostButton,
   SectionLabel,
@@ -48,7 +50,13 @@ export function ConnectAISection() {
   const url = `${window.location.origin}/mcp`;
   const list = assistants('Duffel', 'duffel', url);
   const [open, setOpen] = useState<string | null>(null);
-  const [examples, setExamples] = useState(false);
+  // Whether the examples are open, remembered on this device.
+  const [examples, setExamples] = useState(() => load('aiExamplesOpen', false));
+  const toggleExamples = () =>
+    setExamples((v) => {
+      save('aiExamplesOpen', !v);
+      return !v;
+    });
   const shown = list.find((a) => a.id === open);
   return (
     <div>
@@ -67,10 +75,10 @@ export function ConnectAISection() {
         </div>
       </div>
 
-      <SubHeading>{CONNECTED_TEXT.heading}</SubHeading>
+      <SubHeading icon="link">{CONNECTED_TEXT.heading}</SubHeading>
       <Connections />
 
-      <SubHeading>{CONNECTED_TEXT.setUp}</SubHeading>
+      <SubHeading icon="ai">{CONNECTED_TEXT.setUp}</SubHeading>
       <div className="flex flex-col gap-3 px-6 text-sm">
         <SlideToggle
           label="AI assistant"
@@ -105,17 +113,16 @@ export function ConnectAISection() {
       <button
         type="button"
         aria-expanded={examples}
-        onClick={() => setExamples((v) => !v)}
-        className="flex w-full items-center gap-1.5 px-6 pt-5 pb-2 text-left text-sm font-semibold text-ink"
+        onClick={toggleExamples}
+        className="flex w-full items-center gap-2 px-6 pt-5 pb-2 text-left text-sm font-semibold text-ink"
       >
+        <Icon name="compose" size={15} className="text-accent" />
         {CONNECTED_TEXT.examples}
-        <Icon
-          name="chevDown"
-          size={14}
-          className={cx('text-faint transition-transform', !examples && '-rotate-90')}
-        />
+        <FoldChevron open={examples} size={14} />
       </button>
-      {examples && <TryAsking />}
+      <Collapse open={examples}>
+        <TryAsking />
+      </Collapse>
     </div>
   );
 }

@@ -19,7 +19,7 @@ import { formatRange, plural } from '../lib/format';
 import { keys, useAppState, usePatchTripItem, useTrip } from '../lib/queries';
 import { load, save } from '../lib/storage';
 import { isOffline } from '../lib/offline';
-import { Icon } from '../components/Icon';
+import { Icon, tripIcon } from '../components/Icon';
 import { ItemSheet, type ItemDraft, type SaveResult } from '../components/ItemSheet';
 import { CatalogPicker } from '../components/CatalogPicker';
 import { SwipeRow } from '../components/SwipeRow';
@@ -31,10 +31,12 @@ import { matches } from '../lib/search';
 import { useToast } from '../components/Toast';
 import {
   ActionList,
+  Collapse,
   cx,
   Empty,
   ErrorText,
   FieldRow,
+  FoldChevron,
   GhostButton,
   IconButton,
   InfoPill,
@@ -66,9 +68,14 @@ export function Pack() {
   const state = useAppState();
   const trip = useTrip(id);
   if (state.isPending) return <div className="h-40" />;
-  if (state.error) return <Empty title="Couldn’t load Duffel">{errorMessage(state.error)}</Empty>;
+  if (state.error)
+    return (
+      <Empty title="Couldn’t load Duffel" icon="info">
+        {errorMessage(state.error)}
+      </Empty>
+    );
   const s = state.data;
-  if (!s.trips.some((t) => t.id === id)) return <Empty title="Trip not found" />;
+  if (!s.trips.some((t) => t.id === id)) return <Empty title="Trip not found" icon="search" />;
   return (
     <PackTrip
       tripId={id}
@@ -143,9 +150,14 @@ function PackTrip(props: {
   ) {
     if (!props.tripId || !selected.size) return;
     setError('');
+    // Deleted rows can be put back as they were.
+    const deleted = body.delete ? (detail?.items ?? []).filter((r) => selected.has(r.id)) : [];
     try {
       await api.post(`/trips/${props.tripId}/items/bulk`, { ids: [...selected], ...body });
-      toast({ text: done });
+      toast({
+        text: done,
+        action: deleted.length ? { label: 'Undo', run: () => restore(deleted) } : undefined,
+      });
       stopSelecting();
       setMoveOpen(false);
       setAssignOpen(false);
@@ -274,33 +286,31 @@ function PackTrip(props: {
     setEditing(null);
     try {
       await api.del(`/trip-items/${r.id}`);
-      toast({
-        text: `Deleted ${r.name}`,
-        action: {
-          label: 'Undo',
-          run: async () => {
-            try {
-              await api.post(`/trips/${r.trip_id}/items`, {
-                id: r.id,
-                item_id: r.item_id,
-                name: r.name,
-                person_id: r.person_id && personMap.has(r.person_id) ? r.person_id : null,
-                trip_bag_id: r.trip_bag_id && bagMap.has(r.trip_bag_id) ? r.trip_bag_id : null,
-                no_bag: r.no_bag,
-                qty: r.qty,
-                qty_override: r.qty_override,
-                packed: r.packed,
-                category: r.category,
-                notes: r.notes,
-                sort_order: r.sort_order,
-              });
-            } catch (e) {
-              setError(errorMessage(e));
-            }
-            refresh();
-          },
-        },
-      });
+      toast({ text: `Deleted ${r.name}`, action: { label: 'Undo', run: () => restore([r]) } });
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+    refresh();
+  }
+
+  /** Puts deleted rows back as they were, same ids (Undo). */
+  async function restore(deleted: TripItem[]) {
+    try {
+      for (const r of deleted)
+        await api.post(`/trips/${r.trip_id}/items`, {
+          id: r.id,
+          item_id: r.item_id,
+          name: r.name,
+          person_id: r.person_id && personMap.has(r.person_id) ? r.person_id : null,
+          trip_bag_id: r.trip_bag_id && bagMap.has(r.trip_bag_id) ? r.trip_bag_id : null,
+          no_bag: r.no_bag,
+          qty: r.qty,
+          qty_override: r.qty_override,
+          packed: r.packed,
+          category: r.category,
+          notes: r.notes,
+          sort_order: r.sort_order,
+        });
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -388,7 +398,9 @@ function PackTrip(props: {
 
   if (!trip)
     return props.error ? (
-      <Empty title="Couldn’t load this trip">{errorMessage(props.error)}</Empty>
+      <Empty title="Couldn’t load this trip" icon="info">
+        {errorMessage(props.error)}
+      </Empty>
     ) : (
       <div className="h-40" />
     );
@@ -407,7 +419,8 @@ function PackTrip(props: {
 
       <header className="flex flex-col gap-2 px-5 pt-5 pb-2">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="min-w-0 text-[28px] leading-tight font-semibold tracking-[-0.025em] text-balance">
+          <h1 className="flex min-w-0 items-center gap-2.5 text-[28px] leading-tight font-semibold tracking-[-0.025em] text-balance">
+            <Icon name={tripIcon(trip.trip_type)} size={26} className="text-accent" />
             {trip.name}
           </h1>
           <IconButton
@@ -637,6 +650,7 @@ function PackTrip(props: {
           {!rows.length && detail ? (
             <Empty
               title="This list is empty"
+              icon="bag"
               action={
                 <div className="flex gap-2">
                   <PrimaryButton icon="plus" onClick={() => setMenu('catalog')}>
@@ -684,14 +698,7 @@ function PackTrip(props: {
                           Carry-on
                         </span>
                       )}
-                      <Icon
-                        name="chev"
-                        size={13}
-                        className={cx(
-                          'text-faint transition-transform',
-                          isCollapsed && '-rotate-90',
-                        )}
-                      />
+                      <FoldChevron open={!isCollapsed} />
                     </button>
                     {selecting && g.rows.length > 0 && (
                       <button
@@ -728,13 +735,13 @@ function PackTrip(props: {
                       />
                     )}
                   </div>
-                  {!isCollapsed && g.person?.notes && (
-                    <p className="flex items-start gap-1.5 pt-2 text-[13px] text-soft">
-                      <Icon name="note" size={14} className="mt-0.5 flex-none text-faint" />
-                      {g.person.notes}
-                    </p>
-                  )}
-                  {!isCollapsed && (
+                  <Collapse open={!isCollapsed}>
+                    {g.person?.notes && (
+                      <p className="flex items-start gap-1.5 pt-2 text-[13px] break-words text-soft">
+                        <Icon name="note" size={14} className="mt-0.5 flex-none text-faint" />
+                        {g.person.notes}
+                      </p>
+                    )}
                     <SortableGroups
                       rows={g.rows}
                       saved={trip.category_order}
@@ -749,22 +756,16 @@ function PackTrip(props: {
                           <span className="rounded-full bg-chip px-2.5 py-0.5 text-[13px] font-semibold text-soft">
                             {c}
                           </span>
-                          <Icon
-                            name="chev"
-                            size={12}
-                            className={cx(
-                              'text-faint transition-transform',
-                              folded && '-rotate-90',
-                            )}
-                          />
+                          <FoldChevron open={!folded} size={12} />
                           <span className="ml-auto font-mono text-[11px] text-faint tnum">
                             {rs.filter((r) => r.packed).length}/{rs.length}
                           </span>
                         </div>
                       )}
-                      renderRow={(r) => (
+                      renderRow={(r, handle) => (
                         <Row
                           row={r}
+                          handle={handle}
                           tag={rowTag(r, groupBy, bagMap, personMap, bagName)}
                           onToggle={() => toggle(r)}
                           onEdit={() => setEditing(r)}
@@ -782,7 +783,7 @@ function PackTrip(props: {
                         />
                       )}
                     />
-                  )}
+                  </Collapse>
                 </section>
               );
             })}
@@ -1017,6 +1018,7 @@ function FilterChip({ children, onClear }: { children: React.ReactNode; onClear:
 /** One row: check to pack, tap to edit, swipe left to reveal Delete. */
 function Row({
   row,
+  handle,
   tag,
   onToggle,
   onEdit,
@@ -1026,6 +1028,8 @@ function Row({
   onSelect,
 }: {
   row: TripItem;
+  /** The grip it's dragged by. */
+  handle?: React.ReactNode;
   /** Its bag or person, on the right of the name. */
   tag: React.ReactNode;
   onToggle: () => void;
@@ -1090,7 +1094,7 @@ function Row({
                 {tag}
               </span>
             </span>
-            {row.notes && <span className="truncate text-[13px] text-soft">{row.notes}</span>}
+            {row.notes && <span className="text-[13px] break-words text-soft">{row.notes}</span>}
           </span>
           <span
             className={cx(
@@ -1106,6 +1110,7 @@ function Row({
             {qty === null ? '–' : `×${qty}`}
           </span>
         </button>
+        {handle && <span className="-mr-1.5 ml-1.5">{handle}</span>}
       </div>
     </SwipeRow>
   );

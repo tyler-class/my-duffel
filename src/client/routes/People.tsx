@@ -16,6 +16,7 @@ import {
   PersonDot,
   PrimaryButton,
   Sheet,
+  TextArea,
   TextInput,
 } from '../components/ui';
 
@@ -67,7 +68,7 @@ export function People() {
     <div className="pb-10">
       <CatalogHeader addLabel="Person" onAdd={() => open('new')} />
       {!data.people.length && (
-        <Empty title="No one yet">
+        <Empty title="No one yet" icon="users">
           Add everyone you pack for. Give each person an emoji so their things are easy to spot.
         </Empty>
       )}
@@ -141,7 +142,7 @@ export function People() {
           />
         </FieldRow>
         <FieldRow icon="note" label="Notes" htmlFor="p-notes">
-          <TextInput
+          <TextArea
             id="p-notes"
             value={d.notes}
             placeholder="Sizes, allergies…"

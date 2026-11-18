@@ -14,16 +14,16 @@ export function formatDate(d: string | null): string {
   return `${MONTHS[m - 1]} ${day}`;
 }
 
-/** "Dec 12 – 19", "Dec 30 – Jan 2", "Dec 12" */
+/** "Dec 12 to 19", "Dec 30 to Jan 2", "Dec 12" */
 export function formatRange(start: string | null, end: string | null): string {
   if (!start && !end) return '';
   if (!start || !end) return formatDate(start ?? end);
   const a = parts(start);
   const b = parts(end);
   if (start === end) return formatDate(start);
-  if (a.y === b.y && a.m === b.m) return `${MONTHS[a.m - 1]} ${a.day} – ${b.day}`;
+  if (a.y === b.y && a.m === b.m) return `${MONTHS[a.m - 1]} ${a.day} to ${b.day}`;
   const yearNote = a.y !== b.y ? ` ${b.y}` : '';
-  return `${MONTHS[a.m - 1]} ${a.day} – ${MONTHS[b.m - 1]} ${b.day}${yearNote}`;
+  return `${MONTHS[a.m - 1]} ${a.day} to ${MONTHS[b.m - 1]} ${b.day}${yearNote}`;
 }
 
 export function plural(n: number, one: string, many = `${one}s`) {

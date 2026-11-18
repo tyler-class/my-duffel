@@ -14,8 +14,9 @@ import {
   OffsetStepper,
   PackPicker,
   PeoplePicker,
-  SelectSheet,
   TagPicker,
+  GroupField,
+  NotesField,
 } from '../components/fields';
 import { CatalogHeader } from '../components/CatalogNav';
 import { SwipeRow } from '../components/SwipeRow';
@@ -50,9 +51,28 @@ export function Catalog() {
   const [confirmDelete, setConfirmDelete] = useState<{ item: Item; templates: number } | null>(
     null,
   );
-  const deleteItem = async (i: Item) => {
+  // Undo puts an item back with the same details. One that was on templates can't go back
+  // on them, so it has no Undo (deleting it asks first).
+  const deleteItem = async (i: Item, onTemplates = false) => {
     setConfirmDelete(null);
-    if (await run(() => api.del(`/items/${i.id}`))) toast({ text: `Deleted ${i.name}` });
+    if (await run(() => api.del(`/items/${i.id}`)))
+      toast({
+        text: `Deleted ${i.name}`,
+        action: onTemplates
+          ? undefined
+          : { label: 'Undo', run: () => void run(() => api.post('/items', i)) },
+      });
+  };
+  const archiveItem = async (i: Item) => {
+    setConfirmDelete(null);
+    if (await run(() => api.patch(`/items/${i.id}`, { archived: true })))
+      toast({
+        text: `Archived ${i.name}`,
+        action: {
+          label: 'Undo',
+          run: () => void run(() => api.patch(`/items/${i.id}`, { archived: false })),
+        },
+      });
   };
   const removeItem = (i: Item) => {
     const templates = (data?.templates ?? []).filter((t) =>
@@ -96,17 +116,10 @@ export function Catalog() {
         title={`Delete ${confirmDelete?.item.name ?? 'item'}?`}
         footer={
           <>
-            <GhostButton
-              onClick={async () => {
-                const i = confirmDelete!.item;
-                setConfirmDelete(null);
-                if (await run(() => api.patch(`/items/${i.id}`, { archived: true })))
-                  toast({ text: `Archived ${i.name}` });
-              }}
-            >
+            <GhostButton onClick={() => archiveItem(confirmDelete!.item)}>
               Archive instead
             </GhostButton>
-            <PrimaryButton tone="danger" onClick={() => deleteItem(confirmDelete!.item)}>
+            <PrimaryButton tone="danger" onClick={() => deleteItem(confirmDelete!.item, true)}>
               Delete
             </PrimaryButton>
           </>
@@ -130,7 +143,7 @@ export function Catalog() {
         />
       </div>
       {!data.items.length && (
-        <Empty title="Your catalog is empty">
+        <Empty title="Your catalog is empty" icon="grid">
           Everything you might pack lives here, with how many to bring and who it’s for.
         </Empty>
       )}
@@ -138,6 +151,7 @@ export function Catalog() {
         <section key={cat}>
           <SectionLabel
             sticky
+            icon="layers"
             trailing={<span className="text-xs text-soft tnum">{items.length}</span>}
           >
             {cat}
@@ -221,7 +235,7 @@ export function ItemEditor() {
   const { data } = useAppState();
   if (!data) return null;
   const existing = data.items.find((i) => i.id === id);
-  if (id !== 'new' && !existing) return <Empty title="Item not found" />;
+  if (id !== 'new' && !existing) return <Empty title="Item not found" icon="search" />;
   return <ItemForm key={id} id={id} data={data} initial={existing ?? emptyItem()} />;
 }
 
@@ -249,7 +263,7 @@ function ItemForm({
 
   return (
     <div className="pb-12">
-      <PageHeader title={id === 'new' ? 'New item' : f.name || 'Item'} back="/catalog" />
+      <PageHeader title={id === 'new' ? 'New item' : f.name || 'Item'} icon="tag" back="/catalog" />
       <div className="px-5">
         <FieldRow icon="tag" label="Name" htmlFor="i-name">
           <TextInput
@@ -259,16 +273,12 @@ function ItemForm({
             onChange={(e) => set({ name: e.target.value })}
           />
         </FieldRow>
-        <FieldRow icon="grid" label="Category" htmlFor="i-cat">
-          <SelectSheet
-            id="i-cat"
-            title="Category"
-            value={f.category}
-            onChange={(category) => set({ category })}
-            options={data.lookups.category ?? []}
-            placeholder="Choose a category"
-          />
-        </FieldRow>
+        <GroupField
+          id="i-cat"
+          value={f.category}
+          onChange={(category) => set({ category })}
+          options={data.lookups.category ?? []}
+        />
         <FieldRow
           icon="hash"
           label="How many"
@@ -389,13 +399,11 @@ function ItemForm({
             onChange={(e) => set({ dimensions_source: e.target.value || null })}
           />
         </FieldRow>
-        <FieldRow icon="note" label="Notes" htmlFor="i-notes">
-          <TextInput
-            id="i-notes"
-            value={f.notes ?? ''}
-            onChange={(e) => set({ notes: e.target.value || null })}
-          />
-        </FieldRow>
+        <NotesField
+          id="i-notes"
+          value={f.notes ?? ''}
+          onChange={(notes) => set({ notes: notes || null })}
+        />
         {id !== 'new' && (
           <FieldRow icon="archive" hint="Archived items stay on old trips but aren’t suggested.">
             <div className="flex items-center justify-between">

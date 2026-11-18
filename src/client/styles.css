@@ -344,6 +344,8 @@
   }
 }
 
+/* Sheets and dialogs lift into place: the backdrop fades in and the panel rises, from the
+   bottom edge on phones and a short way up on wider screens. Reduced motion turns both off. */
 @keyframes sheet-in {
   from {
     transform: translateY(100%);
@@ -352,8 +354,54 @@
     transform: translateY(0);
   }
 }
-@media (max-width: 639px) {
-  .sheet-in {
-    animation: sheet-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
   }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+.scrim-in {
+  animation: scrim-in 0.22s ease-out;
+}
+.sheet-in {
+  animation: sheet-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (min-width: 640px) {
+  .sheet-in {
+    animation: dialog-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+/* A drawer that slides open and shut: a one-row grid whose row goes from 0fr to 1fr. The
+   child needs min-height: 0 and overflow: hidden (the .drawer-inner class). */
+.drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.drawer[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+.drawer-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.drawer[data-open='false'] .drawer-inner {
+  visibility: hidden;
+  transition: visibility 0s 0.24s;
+}
+
+/* Keyboard focus drawn inside the control, for toggles whose scrolling tracks clip outside. */
+.focus-inset:focus-visible {
+  outline-offset: -2px;
+  border-radius: 999px;
 }

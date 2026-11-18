@@ -16,6 +16,7 @@ import {
   PrimaryButton,
   Sheet,
   Switch,
+  TextArea,
   TextInput,
 } from '../components/ui';
 
@@ -68,7 +69,7 @@ export function Suitcases() {
     <div className="pb-10">
       <CatalogHeader addLabel="Bag" onAdd={() => open('new')} />
       {!data.suitcases.length && (
-        <Empty title="No suitcases yet">
+        <Empty title="No suitcases yet" icon="bag">
           Add the bags you own. Give them a capacity in liters to see how full they get on a trip.
         </Empty>
       )}
@@ -208,7 +209,7 @@ export function Suitcases() {
           </div>
         </FieldRow>
         <FieldRow icon="note" label="Notes" htmlFor="s-notes">
-          <TextInput
+          <TextArea
             id="s-notes"
             value={d.notes ?? ''}
             onChange={(e) => setD({ ...d, notes: e.target.value || null })}

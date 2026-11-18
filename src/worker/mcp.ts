@@ -3,6 +3,7 @@
 // because OAuthProvider has already checked the assistant's token.
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
+import { version } from '../../package.json';
 import {
   calcSummary,
   connections,
@@ -13,6 +14,7 @@ import {
   sortSections,
   describeRelative,
   displayQty,
+  isArchived,
   isCarryOn,
   localToday,
   orderCategories,
@@ -311,15 +313,13 @@ How to work with it:
 - Give to-dos relative dates (days before, on or after the start, middle or end of the trip) so they move with the trip.
 - Itinerary times are local, as printed on the booking, with each place's IANA time zone (an airport code fills it in). Add one transport entry per flight segment so layovers show. If the person's email is connected to you too, you can search it for confirmations and add them (see the add_bookings prompt).
 - Ask before removing items or changing many entries at once.
+- Archived catalog items and archived or past trips stay out of search_catalog and add_items. If the owner asks about something that seems missing, look with search_archive: it says what's archived and why. Bring an item or trip back with restore_archived only when the owner asks.
 
 When someone asks what you can do with Duffel (or seems unsure where to start), call get_started: it returns their trips and lists as they stand now, and example requests to offer. Suggest two or three that fit, phrased for their trips, rather than listing tools. Examples:
 ${EXAMPLE_PROMPTS.map((e) => `- "${e.prompt}"`).join('\n')}`;
 
 function buildServer(call: Call) {
-  const server = new McpServer(
-    { name: 'duffel', version: '1.0.0' },
-    { instructions: INSTRUCTIONS },
-  );
+  const server = new McpServer({ name: 'duffel', version }, { instructions: INSTRUCTIONS });
   const state = () => call<AppState>('GET', '/state');
   const trip = (id: string) => call<TripDetail>('GET', `/trips/${encodeURIComponent(id)}`);
   async function resolveTrip(key?: string) {
@@ -432,6 +432,91 @@ function buildServer(call: Call) {
             activities: i.activity_tags,
             auto_pack: packLabel(packChoice(i)),
           })),
+        );
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    'search_archive',
+    {
+      description:
+        'Find archived catalog items and archived or past trips. These are left out of the other tools; each result says why it’s archived and how to bring it back. Read-only.',
+      inputSchema: z.object({ query: z.string().optional() }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ query }) => {
+      try {
+        const s = await state();
+        const q = query?.trim().toLowerCase() ?? '';
+        const hit = (...fields: (string | null)[]) =>
+          !q || fields.some((f) => (f ?? '').toLowerCase().includes(q));
+        const today = localToday();
+        const items = s.items
+          .filter((i) => i.archived && hit(i.name, i.category))
+          .map((i) => ({ id: i.id, name: i.name, category: i.category, archived: true }));
+        const trips = s.trips
+          .filter((t) => isArchived(t, today) && hit(t.name, t.destination))
+          .map((t) => ({
+            id: t.id,
+            name: t.name,
+            start_date: t.start_date,
+            end_date: t.end_date,
+            archived: true,
+            why: t.archived_at
+              ? 'archived by hand'
+              : t.item_count > 0 && t.packed_count === t.item_count
+                ? 'everything is packed'
+                : 'it ended more than a week ago',
+          }));
+        return text({
+          note: 'These are archived: they don’t show in search_catalog, add_items or the app’s normal lists. Past trips can still be read by name with get_packing_list. If the owner asks to bring one back, use restore_archived (a trip that is past or fully packed stays archived on its own).',
+          catalog_items: items,
+          trips,
+        });
+      } catch (e) {
+        return fail(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    'restore_archived',
+    {
+      description:
+        'Bring back an archived catalog item or a trip archived by hand. Only when the owner asks; find it first with search_archive.',
+      inputSchema: z.object({
+        kind: z.enum(['catalog_item', 'trip']),
+        name: z.string().min(1).describe('Name or id from search_archive'),
+      }),
+    },
+    async ({ kind, name }) => {
+      try {
+        const s = await state();
+        if (kind === 'catalog_item') {
+          const item = find(
+            s.items.filter((i) => i.archived),
+            name,
+            (i) => i.name,
+            'archived catalog item',
+          );
+          await call('PATCH', `/items/${item.id}`, { archived: false });
+          return text(`${item.name} is back in the catalog.`);
+        }
+        const t = find(
+          s.trips.filter((x) => x.archived_at),
+          name,
+          (x) => x.name,
+          'trip archived by hand',
+        );
+        await call('PATCH', `/trips/${t.id}`, { archived: false });
+        const still = isArchived({ ...t, archived_at: null }, localToday());
+        return text(
+          still
+            ? `Un-archived ${t.name}, but it still counts as past because it ended more than a week ago or everything is packed.`
+            : `${t.name} is back with the upcoming trips.`,
         );
       } catch (e) {
         return fail(e);

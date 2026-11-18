@@ -95,7 +95,7 @@ export function Trips() {
         }
       />
       {!data.trips.length && (
-        <Empty title="No trips yet">
+        <Empty title="No trips yet" icon="map">
           Plan one from a template, copy a past trip, or start blank.
         </Empty>
       )}

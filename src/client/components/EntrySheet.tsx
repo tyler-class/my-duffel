@@ -29,6 +29,7 @@ import {
   Sheet,
   SlideToggle,
   TextInput,
+  TextArea,
 } from './ui';
 
 export interface EntryDraft {
@@ -421,14 +422,13 @@ function EntrySheetBody({ initial, editing, zone, onClose, onSave, onDelete }: P
           </FieldRow>
         )}
         <FieldRow icon="note" label="Notes" htmlFor="entry-notes">
-          <textarea
+          <TextArea
             id="entry-notes"
-            rows={d.kind === 'note' ? 5 : 3}
+            rows={d.kind === 'note' ? 3 : 2}
             value={d.notes ?? ''}
             autoFocus={!editing && d.kind === 'note'}
             placeholder={d.kind === 'note' ? 'e.g. Passports are in the blue folder' : 'Optional'}
             onChange={(e) => set({ notes: e.target.value })}
-            className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink transition-colors placeholder:text-faint/55 focus:border-accent focus:outline-none"
           />
         </FieldRow>
         <button type="submit" hidden />

@@ -14,7 +14,7 @@ import type { AppState, Template, TemplateTodo, TripDetail, TripTodo } from '@sh
 import { api, errorMessage } from '../lib/api';
 import { formatDay } from '../lib/format';
 import { keys } from '../lib/queries';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { SwipeRow } from './SwipeRow';
 import { TodoSheet, type TodoDraft } from './TodoSheet';
 import { useToast } from './Toast';
@@ -30,6 +30,8 @@ export function phaseOrder(stage: Stage): TodoPhase[] {
 }
 
 const NOW: Record<Stage, TodoPhase> = { before: 'pre', during: 'during', after: 'after' };
+
+const PHASE_ICONS: Record<TodoPhase, IconName> = { pre: 'clock', during: 'map', after: 'check' };
 
 function PhaseHeader({
   phase,
@@ -47,6 +49,7 @@ function PhaseHeader({
   const label = TODO_PHASE_LABELS[phase];
   return (
     <div className="flex items-center gap-2 rounded-2xl bg-chip py-1.5 pr-1.5 pl-3.5">
+      <Icon name={PHASE_ICONS[phase]} size={16} className="text-soft" />
       <span className="text-base font-semibold">{label}</span>
       {now && (
         <span className="rounded bg-todo-tint px-1.5 py-px text-[11px] font-medium text-todo">

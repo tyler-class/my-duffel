@@ -7,6 +7,7 @@ import {
   type ReactNode,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon, type IconName } from './Icon';
@@ -131,6 +132,31 @@ export function TextInput(p: InputHTMLAttributes<HTMLInputElement>) {
       {...p}
       className={cx(
         'w-full rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink transition-colors placeholder:text-faint/55 focus:border-accent focus:outline-none',
+        p.className,
+      )}
+    />
+  );
+}
+
+/**
+ * A longer text field (notes): looks like TextInput and grows with the text instead of
+ * scrolling. rows is where it starts.
+ */
+export function TextArea({ rows = 1, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+  }, [p.value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={rows}
+      {...p}
+      className={cx(
+        'block w-full resize-none overflow-hidden rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink transition-colors placeholder:text-faint/55 focus:border-accent focus:outline-none',
         p.className,
       )}
     />
@@ -370,7 +396,7 @@ function SheetBody({
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-6">
       <div
-        className="absolute inset-0 bg-[var(--scrim)]"
+        className="scrim-in absolute inset-0 bg-[var(--scrim)]"
         style={{ opacity: dy > 0 ? Math.max(0.2, 1 - dy / 500) : 1 }}
         onClick={onClose}
       />
@@ -593,17 +619,23 @@ export function SectionLabel({
   );
 }
 
+/** An empty state: an icon in a soft circle, a headline and one line. */
 export function Empty({
   title,
+  icon = 'sparkle',
   children,
   action,
 }: {
   title: string;
+  icon?: IconName;
   children?: ReactNode;
   action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center gap-3 px-8 py-16 text-center">
+      <span className="grid h-14 w-14 place-items-center rounded-full bg-accent-tint text-accent">
+        <Icon name={icon} size={24} />
+      </span>
       <p className="text-base font-medium">{title}</p>
       {children && <p className="max-w-[34ch] text-sm text-soft">{children}</p>}
       {action}
@@ -711,9 +743,14 @@ export function Menu({
   );
 }
 
-/** A subheading inside a section: plain bold text, aligned with the section's content. */
-export function SubHeading({ children }: { children: ReactNode }) {
-  return <h3 className="px-6 pt-5 pb-2 text-sm font-semibold text-ink">{children}</h3>;
+/** A subheading inside a section: bold text with a small accent icon, aligned with the section's content. */
+export function SubHeading({ children, icon }: { children: ReactNode; icon?: IconName }) {
+  return (
+    <h3 className="flex items-center gap-2 px-6 pt-5 pb-2 text-sm font-semibold text-ink">
+      {icon && <Icon name={icon} size={15} className="text-accent" />}
+      {children}
+    </h3>
+  );
 }
 
 type SlideToggleProps<T extends string> = {
@@ -794,7 +831,7 @@ export function SlideToggle<T extends string>(props: SlideToggleProps<T>) {
           aria-selected={i === index}
           onClick={() => pick(v)}
           className={cx(
-            'relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full whitespace-nowrap transition-colors',
+            'focus-inset relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full whitespace-nowrap transition-colors',
             size === 'sm' ? 'px-2.5 py-1 text-[13px]' : 'px-3 py-1.5 text-sm',
             i === index ? 'font-semibold text-accent' : 'text-seg-off',
           )}
@@ -813,5 +850,63 @@ export function InfoPill({ icon, children }: { icon: IconName; children: ReactNo
       <Icon name={icon} size={13} className="text-faint" />
       {children}
     </span>
+  );
+}
+
+/**
+ * Content under a collapsible header that slides open and shut. While it moves, or stays
+ * shut, it clips; once open it doesn't, so focus rings and shadows inside show in full.
+ */
+export function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
+  const [settled, setSettled] = useState(open);
+  return (
+    <div
+      className="drawer"
+      data-open={open}
+      inert={!open}
+      onTransitionEnd={(e) => {
+        if (e.target === e.currentTarget) setSettled(open);
+      }}
+    >
+      <div className={cx('drawer-inner', open && settled && 'overflow-visible!')}>{children}</div>
+    </div>
+  );
+}
+
+/** The chevron on a collapsible header: down when shut, turned up when open. */
+export function FoldChevron({ open, size = 13 }: { open: boolean; size?: number }) {
+  return (
+    <Icon
+      name="chev"
+      size={size}
+      className={cx('text-faint transition-transform duration-200', open && 'rotate-180')}
+    />
+  );
+}
+
+/** The grip a row or group is dragged by. Gets dnd-kit's activator ref, attributes and listeners. */
+export function DragHandle({
+  handleRef,
+  label,
+  className,
+  ...p
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  handleRef?: (el: HTMLElement | null) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      ref={handleRef}
+      {...p}
+      aria-label={label}
+      title={label}
+      className={cx(
+        'focus-inset grid h-8 w-6 flex-none cursor-grab touch-manipulation place-items-center rounded-full text-faint select-none [-webkit-touch-callout:none] active:cursor-grabbing',
+        className,
+      )}
+    >
+      <Icon name="grip" size={16} />
+    </button>
   );
 }

@@ -30,8 +30,9 @@ import {
   OnePicker,
   PackPicker,
   PeoplePicker,
-  SelectSheet,
   TagPicker,
+  GroupField,
+  NotesField,
 } from '../components/fields';
 import { SortableGroups } from '../components/SortableGroups';
 import { TemplateTodos } from '../components/Todos';
@@ -39,7 +40,7 @@ import { SearchToggle } from '../components/SearchToggle';
 import { matches } from '../lib/search';
 import { SwipeRow } from '../components/SwipeRow';
 import {
-  cx,
+  FoldChevron,
   DangerButton,
   Empty,
   ErrorText,
@@ -52,6 +53,7 @@ import {
   PrimaryButton,
   Sheet,
   SlideToggle,
+  TextArea,
   TextInput,
 } from '../components/ui';
 
@@ -75,7 +77,7 @@ export function Templates() {
         }
       />
       {!data.templates.length && (
-        <Empty title="No templates yet">
+        <Empty title="No templates yet" icon="tmpl">
           A template is a reusable packing list, like “Beach week”. You can also save any trip as a
           template from its menu.
         </Empty>
@@ -159,7 +161,7 @@ export function TemplateEditor() {
   const { data } = useAppState();
   if (!data) return null;
   const tpl = data.templates.find((t) => t.id === id);
-  if (!tpl) return <Empty title="Template not found" />;
+  if (!tpl) return <Empty title="Template not found" icon="search" />;
   return <TemplateBody key={tpl.id} data={data} tpl={tpl} />;
 }
 
@@ -271,6 +273,7 @@ function TemplateBody({ data, tpl }: { data: AppState; tpl: Template }) {
     <div className="pb-12">
       <PageHeader
         title={tpl.name}
+        icon="tmpl"
         back="/templates"
         action={
           <PrimaryButton icon="plus" onClick={() => nav(`/trips/new?template=${tpl.id}`)}>
@@ -396,15 +399,11 @@ function TemplateBody({ data, tpl }: { data: AppState; tpl: Template }) {
                   <span className="rounded-full bg-chip px-2.5 py-0.5 text-[13px] font-semibold text-soft">
                     {c}
                   </span>
-                  <Icon
-                    name="chev"
-                    size={12}
-                    className={cx('text-faint transition-transform', isFolded && '-rotate-90')}
-                  />
+                  <FoldChevron open={!isFolded} size={12} />
                   <span className="ml-auto font-mono text-[11px] text-faint tnum">{rs.length}</span>
                 </div>
               )}
-              renderRow={(ti) => {
+              renderRow={(ti, handle) => {
                 const item = items.get(ti.item_id);
                 const who = ti.assignees.length ? ti.assignees : (item?.default_people ?? []);
                 return (
@@ -413,39 +412,46 @@ function TemplateBody({ data, tpl }: { data: AppState; tpl: Template }) {
                     onDelete={() => run(() => api.del(`/template-items/${ti.id}`))}
                     className="border-b border-line"
                   >
-                    <button
-                      onClick={() => setEditing(ti)}
-                      className="flex w-full items-center gap-3 px-1 py-3 text-left"
-                    >
-                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="text-base">{item?.name ?? 'Removed item'}</span>
-                        <span className="flex items-center gap-2.5 text-[13px] text-soft">
-                          {who.length ? (
-                            <span className="inline-flex items-center gap-1">
-                              {who.map((p) => (
-                                <PersonDot key={p} person={people.get(p)} />
-                              ))}
-                              {!ti.assignees.length && <span className="text-faint">default</span>}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1">
-                              <Icon name="users" size={13} />
-                              Shared
-                            </span>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => setEditing(ti)}
+                        className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3 text-left"
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="text-base">{item?.name ?? 'Removed item'}</span>
+                          <span className="flex items-center gap-2.5 text-[13px] text-soft">
+                            {who.length ? (
+                              <span className="inline-flex items-center gap-1">
+                                {who.map((p) => (
+                                  <PersonDot key={p} person={people.get(p)} />
+                                ))}
+                                {!ti.assignees.length && (
+                                  <span className="text-faint">default</span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1">
+                                <Icon name="users" size={13} />
+                                Shared
+                              </span>
+                            )}
+                            {(ti.pack_type || ti.carry_on) && (
+                              <span className="inline-flex items-center gap-1">
+                                <Icon name={ti.pack_type ? 'bag' : 'backpack'} size={13} />
+                                {ti.pack_type ?? 'Carry-on'}
+                              </span>
+                            )}
+                          </span>
+                          {ti.notes && (
+                            <span className="text-[13px] break-words text-soft">{ti.notes}</span>
                           )}
-                          {(ti.pack_type || ti.carry_on) && (
-                            <span className="inline-flex items-center gap-1">
-                              <Icon name={ti.pack_type ? 'bag' : 'backpack'} size={13} />
-                              {ti.pack_type ?? 'Carry-on'}
-                            </span>
-                          )}
-                          {ti.notes && <span className="truncate">{ti.notes}</span>}
                         </span>
-                      </span>
-                      <span className="font-mono text-[13px] text-soft tnum">
-                        {overrideSummary(ti, item)}
-                      </span>
-                    </button>
+                        <span className="font-mono text-[13px] text-soft tnum">
+                          {overrideSummary(ti, item)}
+                        </span>
+                      </button>
+                      {handle}
+                    </div>
                   </SwipeRow>
                 );
               }}
@@ -487,7 +493,7 @@ function TemplateBody({ data, tpl }: { data: AppState; tpl: Template }) {
             />
           </FieldRow>
           <FieldRow icon="note" label="Notes" htmlFor="tpl-notes">
-            <TextInput
+            <TextArea
               id="tpl-notes"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -663,16 +669,7 @@ function TemplateItemSheet({
         </>
       }
     >
-      <FieldRow icon="grid" label="Group" htmlFor="ti-group">
-        <SelectSheet
-          id="ti-group"
-          title="Group"
-          value={category}
-          onChange={setCategory}
-          options={categories}
-          placeholder="No group"
-        />
-      </FieldRow>
+      <GroupField id="ti-group" value={category} onChange={setCategory} options={categories} />
       <FieldRow
         icon="hash"
         label="How many"
@@ -749,9 +746,7 @@ function TemplateItemSheet({
           noBag={false}
         />
       </FieldRow>
-      <FieldRow icon="note" label="Notes" htmlFor="ti-notes">
-        <TextInput id="ti-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </FieldRow>
+      <NotesField id="ti-notes" value={notes} onChange={setNotes} />
       <div className="pt-3">
         <ErrorText>{error}</ErrorText>
       </div>

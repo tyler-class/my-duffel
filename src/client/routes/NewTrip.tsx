@@ -134,7 +134,7 @@ export function NewTrip() {
 
   return (
     <div className="pb-10">
-      <PageHeader title="New trip" back="/" />
+      <PageHeader title="New trip" icon="plane" back="/" />
       <div className="px-5">
         <div className="flex flex-col border-t border-line">
           {options.map(([v, title, sub, icon]) => (

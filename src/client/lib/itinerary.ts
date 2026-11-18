@@ -23,6 +23,16 @@ export function formatClock(hhmm: string | null): string {
   return clock.format(Date.UTC(2000, 0, 1, +m[1]!, +m[2]!));
 }
 
+/** "9:00 to 10:30 AM", "11:00 AM to 1:00 PM": a time range, the shared AM or PM said once. */
+export function timeRange(start: string, end: string): string {
+  if (!start || !end) return start || end;
+  const a = /^(.*?)[\s\u202f](AM|PM)$/i.exec(start);
+  const b = /[\s\u202f](AM|PM)$/i.exec(end);
+  return a && b && a[2]!.toUpperCase() === b[1]!.toUpperCase()
+    ? `${a[1]} to ${end}`
+    : `${start} to ${end}`;
+}
+
 /** "EDT", "GMT+1": a zone's short name at an instant. */
 export function zoneName(tz: string, at: number): string {
   try {

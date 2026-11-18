@@ -18,7 +18,7 @@ import {
 } from '@shared/logic';
 import type { ItinerarySection, TripDetail } from '@shared/types';
 import { formatDay, formatRange } from './format';
-import { formatClock } from './itinerary';
+import { formatClock, timeRange } from './itinerary';
 
 export type PaperSize = 'letter' | 'a4';
 export type Printable = Pick<TripDetail, 'trip' | 'itinerary'>;
@@ -164,7 +164,7 @@ function rowText(r: ItineraryRow) {
       if (bits.length) lines.push(bits.join(' · '));
     }
   } else if (e.kind === 'plan') {
-    const time = [formatClock(e.start.time), formatClock(e.end.time)].filter(Boolean).join(' – ');
+    const time = timeRange(formatClock(e.start.time), formatClock(e.end.time));
     const where = e.start.place;
     if (time || where) lines.push([time, where].filter(Boolean).join(' · '));
   }

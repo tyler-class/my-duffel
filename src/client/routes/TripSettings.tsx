@@ -22,6 +22,7 @@ import {
   SectionLabel,
   Sheet,
   Switch,
+  TextArea,
   TextInput,
 } from '../components/ui';
 
@@ -64,6 +65,7 @@ export function TripSettings() {
     return (
       <Empty
         title="Trip not found"
+        icon="search"
         action={<GhostButton onClick={() => nav('/')}>Back to trips</GhostButton>}
       />
     );
@@ -155,7 +157,7 @@ function TripSettingsBody({ detail, state }: { detail: TripDetail; state: AppSta
 
   return (
     <div className="pb-12">
-      <PageHeader title={trip.name} back />
+      <PageHeader title={trip.name} icon="settings" back />
 
       <SectionLabel icon="bag">Bags</SectionLabel>
       <div className="px-6">
@@ -319,7 +321,7 @@ function TripSettingsBody({ detail, state }: { detail: TripDetail; state: AppSta
           />
         </FieldRow>
         <FieldRow icon="note" label="Notes" htmlFor="t-notes">
-          <TextInput
+          <TextArea
             id="t-notes"
             value={form.notes}
             onChange={(e) => set({ notes: e.target.value })}
