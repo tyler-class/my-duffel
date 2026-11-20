@@ -1,8 +1,8 @@
 {
   "name": "duffel",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "private": true,
-  "description": "A family packing-list app you host yourself on Cloudflare.",
+  "description": "A packing-list app you host yourself on Cloudflare.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -26,7 +26,7 @@
   "cloudflare": {
     "bindings": {
       "APP_PASSWORD": {
-        "description": "The one password your household uses to sign in to Duffel. Pick something long; you can change it later in the Cloudflare dashboard under **Workers → duffel → Settings → Variables and Secrets**."
+        "description": "The password you sign in to Duffel with. Pick something long; you can change it later in the Cloudflare dashboard under **Workers → duffel → Settings → Variables and Secrets**."
       },
       "DB": {
         "description": "Where your trips, items and packing lists are stored."

@@ -1,4 +1,4 @@
-// MCP server: lets any MCP-capable assistant read and update this household's packing lists.
+// MCP server: lets any MCP-capable assistant read and update this copy of Duffel's packing lists.
 // Tools call the same REST API the app uses (validation and logic live there), marked internal
 // because OAuthProvider has already checked the assistant's token.
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server';
@@ -305,7 +305,7 @@ const entryFields = {
   notes: z.string().optional(),
 };
 
-const INSTRUCTIONS = `Duffel is a household's packing list. Each trip has a packing list (one entry per person per item, placed in bags and sorted into groups like Clothing or Documents) and to-dos before, during and after the trip. Trips also have an itinerary: sections in order (travel, like "Getting there", and stays, like "Lisbon"), each holding transport (a departure and its arrival), lodging, plans and notes. Templates are reusable lists; the catalog is everything the household packs.
+const INSTRUCTIONS = `Duffel is a packing list for trips. Each trip has a packing list (one entry per person per item, placed in bags and sorted into groups like Clothing or Documents) and to-dos before, during and after the trip. Trips also have an itinerary: sections in order (travel, like "Getting there", and stays, like "Lisbon"), each holding transport (a departure and its arrival), lodging, plans and notes. Templates are reusable lists; the catalog is everything the owner packs.
 
 How to work with it:
 - Refer to trips, templates, people and bags by name. Item and to-do ids come from get_packing_list, get_template and list_todos.
@@ -355,7 +355,7 @@ function buildServer(call: Call) {
     'list_trips',
     {
       description:
-        'List upcoming and past trips with packing progress, plus the household’s people.',
+        'List upcoming and past trips with packing progress, plus the people the owner packs for.',
       inputSchema: z.object({}),
     },
     async () => {
@@ -371,7 +371,7 @@ function buildServer(call: Call) {
           packed: `${t.packed_count} of ${t.item_count}`,
         });
         return text({
-          household: s.settings.instance_name,
+          name: s.settings.instance_name,
           people: s.people.map((p) => p.name),
           upcoming: active.map(row),
           past: archived.map(row),
@@ -403,7 +403,7 @@ function buildServer(call: Call) {
     'search_catalog',
     {
       description:
-        'Search the catalog of things this household packs, with each item’s group, quantity rule, who packs it, and the weather and activities it’s for.',
+        'Search the catalog of things the owner packs, with each item’s group, quantity rule, who packs it, and the weather and activities it’s for.',
       inputSchema: z.object({ query: z.string().optional() }),
     },
     async ({ query }) => {
@@ -884,7 +884,7 @@ function buildServer(call: Call) {
     {
       title: 'What can I do here?',
       description:
-        'Call when someone asks what you can do with Duffel or how to start. Returns their household, trips and lists as they stand, example requests that fit, and the ready-made prompts.',
+        'Call when someone asks what you can do with Duffel or how to start. Returns the people they pack for, trips and lists as they stand, example requests that fit, and the ready-made prompts.',
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -894,7 +894,7 @@ function buildServer(call: Call) {
         const today = localToday();
         const { active } = splitTrips(s.trips, today);
         const lines = [
-          `Household: ${s.people.map((p) => p.name).join(', ') || 'no people yet'}.`,
+          `Packs for: ${s.people.map((p) => p.name).join(', ') || 'no people yet'}.`,
           `${s.items.filter((i) => !i.archived).length} items in the catalog, ${s.templates.length} template${s.templates.length === 1 ? '' : 's'}${s.templates.length ? ` (${s.templates.map((t) => t.name).join(', ')})` : ''}.`,
         ];
         const next = active[0];

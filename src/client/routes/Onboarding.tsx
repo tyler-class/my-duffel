@@ -6,7 +6,7 @@ import { useAppState } from '../lib/queries';
 import { Icon } from '../components/Icon';
 import { ErrorText, GhostButton, PersonDot, PrimaryButton } from '../components/ui';
 
-/** First run: add the people you pack for, or load a sample household. */
+/** First run: add the people you pack for, or load sample data. */
 export function Onboarding() {
   const nav = useNavigate();
   const state = useAppState();
@@ -76,8 +76,7 @@ export function Onboarding() {
         <div className="flex flex-col gap-1 rounded-xl bg-chip p-4">
           <p className="text-sm font-medium">Just looking around?</p>
           <p className="text-sm text-soft">
-            Load a sample family with a catalog, two templates and one trip. You can delete it
-            later.
+            Load sample data with a catalog, two templates and one trip. You can delete it later.
           </p>
           <GhostButton
             className="-ml-3 self-start text-accent"

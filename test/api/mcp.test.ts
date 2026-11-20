@@ -141,7 +141,7 @@ describe('MCP', () => {
   });
 
   // Long: it walks through most tools in one session.
-  it('connects with the household password and runs tools', { timeout: 30_000 }, async () => {
+  it('connects with the password and runs tools', { timeout: 30_000 }, async () => {
     const api = await session();
     await api.post('/sample-data');
     const { token } = await connect();
@@ -473,7 +473,7 @@ describe('MCP', () => {
     expect(JSON.stringify(left.data.result)).toContain('our next trip');
     const started = await call('get_started', {});
     expect(started.error).toBe(false);
-    expect(started.text).toContain('Household: Sam');
+    expect(started.text).toContain('Packs for: Sam');
     expect(started.text).toContain('Next trip: Lisbon');
     for (const e of EXAMPLE_PROMPTS) expect(started.text).toContain(e.prompt);
     for (const p of MCP_PROMPTS) expect(started.text).toContain(p.name);

@@ -1,4 +1,4 @@
-// Generates seed/sample.json: a small, generic household for demos and "Load sample data".
+// Generates seed/sample.json: small, generic sample data for demos and "Load sample data".
 // Run: npx tsx scripts/build-sample.ts
 import { writeFileSync } from 'node:fs';
 import {

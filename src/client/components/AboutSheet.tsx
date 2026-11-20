@@ -40,9 +40,9 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
     >
       <div className="flex flex-col gap-3 pt-1">
         <p className="text-base text-ink">
-          Duffel is a free, open-source packing list for families: who packs what, which bag it goes
-          in, and the to-dos around every trip. It runs on your own Cloudflare account, so your data
-          stays yours.
+          Duffel is a free, open-source packing list: who packs what, which bag it goes in, and the
+          to-dos around every trip. It runs on your own Cloudflare account, so your data stays
+          yours.
         </p>
         <p className="text-sm text-soft">{BUILT_BY}</p>
       </div>

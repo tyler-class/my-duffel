@@ -24,7 +24,7 @@ export default defineConfig({
       manifest: {
         name: 'Duffel',
         short_name: 'Duffel',
-        description: 'A calm packing list for families.',
+        description: 'A calm packing list for every trip.',
         display: 'standalone',
         start_url: '/',
         scope: '/',

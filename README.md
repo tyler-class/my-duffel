@@ -1,10 +1,10 @@
 # Duffel
 
-Packing for a family trip is a group project that usually lives in one person's head. Duffel is a calm, shared packing list that gets it out of there. Plan what everyone needs once, let quantities scale with the length of the trip, have items land in the right bags, and tick things off together from your phones.
+Packing for a trip usually lives in your head. Duffel is a calm packing list that gets it out of there. Plan what you (and anyone you pack for) need once, let quantities scale with the length of the trip, have items land in the right bags, and tick things off from your phone.
 
 The rest of the trip lives there too. To-dos cover everything that isn't packing, like dropping the dog at the sitter or renewing a passport in time, with dates that move when the trip does. The itinerary keeps flights, stays and reservations in order, and with the built-in MCP server your AI assistant can pull them straight out of your confirmation emails and drop them in for you.
 
-Next time, copy the last trip and start from a list that already knows your family. It's built for households with kids, gear and more than one carry-on - the trips where a forgotten diaper bag is a real problem, not an inconvenience.
+Next time, copy the last trip and start from a list that already knows what you bring. It's built for trips with gear, kids or more than one carry-on - the trips where a forgotten bag is a real problem, not an inconvenience.
 
 [![Deploy to Cloudflare](docs/deploy-to-cloudflare.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/tyler-class/Duffel)
 
@@ -17,7 +17,7 @@ Next time, copy the last trip and start from a list that already knows your fami
 - **Itinerary.** Each trip’s plan in order: travel sections (“Getting there”, “Lisbon → Porto”) and stays. Add flights, trains, buses, boats and drives with their departure and arrival, plus lodging, reservations and notes with booking numbers. Times are local, as on the ticket; type an airport code and the city and time zone fill in, and flight times and layovers are worked out across time zones. New entries go where their time falls; drag entries and sections to rearrange them, and connecting flights always stay back to back. Print turns the itinerary into a PDF: share it from your phone (print, save, AirDrop, email) or open it on a computer. Itineraries stay with their trip and aren’t copied.
 - **Templates and past trips.** Start a trip from a template, copy last year’s trip (everything starts unpacked and undone), or save any trip as a new template. Lists, groups, bags and to-dos come along.
 - **Built for phones.** Install it to your home screen. The last trip you opened works offline, and check-offs sync when you’re back online.
-- **Pack together.** Everyone in the household signs in with one shared password and sees changes within seconds.
+- **On every device.** Changes show up within seconds on your phone and computer.
 - **AI assistants.** Connect Claude, ChatGPT or any MCP-capable assistant and ask it to build or update your lists, groups, to-dos and itineraries. Connect your email to the same assistant and it can add bookings from confirmation emails.
 - **Yours.** It runs on your own Cloudflare account. The free plan is plenty. Your data stays in your database.
 
@@ -25,9 +25,9 @@ Next time, copy the last trip and start from a list that already knows your fami
 
 **Ask your assistant, typed or out loud.** It builds a trip from your template, adds bookings from your confirmation emails, and tells you what's still not packed.
 
-![An AI assistant connected to Duffel: on a laptop it creates a family trip to Tulum from a template, adds to-dos and pulls the flights and hotel into the itinerary; on a phone it answers when the flight leaves and what's still not packed](docs/screenshots/ai-chat.png)
+![An AI assistant connected to Duffel: on a laptop it creates a trip to Tulum from a template, adds to-dos and pulls the flights and hotel into the itinerary; on a phone it answers when the flight leaves and what's still not packed](docs/screenshots/ai-chat.png)
 
-One deployment is one household.
+Each copy you deploy is your own, with its own data.
 
 ## A look around
 
@@ -51,7 +51,7 @@ One deployment is one household.
 
 ![A template's bags and items on a computer, with a note on items that won't have a bag](docs/screenshots/template-desktop.png)
 
-**Catalog and people.** Everything you own, how many to bring, and who’s in the family.
+**Catalog and people.** Everything you own, how many to bring, and who you pack for.
 
 ![Three phone screens: the catalog grouped by category, a T-shirt set to 1 per day at most 7, and the Edit person sheet](docs/screenshots/catalog.png)
 
@@ -102,7 +102,7 @@ Sign in to Cloudflare if it asks. You land on a setup page.
 
 ### 6. Set your password
 
-Under **Variables and secrets**, fill in **APP_PASSWORD**: the one password everyone in your household uses to sign in. Pick something long. You can change it later (see [Change your password](#change-your-password)), but set it now.
+Under **Variables and secrets**, fill in **APP_PASSWORD**: the password you sign in with. Pick something long. You can change it later (see [Change your password](#change-your-password)), but set it now.
 
 <!-- 📸 SCREENSHOT docs/screenshots/install-6-password.png: The APP_PASSWORD field on the setup page -->
 
@@ -140,7 +140,7 @@ Duffel can send notifications to your phone. They only work in the app installed
 
 **Install it on Android:** open Duffel in Chrome, open the menu **⋮** and tap **Install app** (or **Add to Home screen**), then open it from the new icon.
 
-**Turn them on:** in the installed app, open **Settings → Notifications** and switch on **Notifications on this device**. Allow notifications when your phone asks. Each phone chooses its own, so everyone in the family can pick what they get. **Send a test** checks it's working.
+**Turn them on:** in the installed app, open **Settings → Notifications** and switch on **Notifications on this device**. Allow notifications when your phone asks. Each device has its own on/off switch and choices. **Send a test** checks it's working.
 
 ## Updates
 
@@ -197,7 +197,7 @@ Each phone picks its own notifications in **Settings → Notifications**. Press 
 
 ## Connect an AI assistant
 
-Duffel includes an [MCP](https://modelcontextprotocol.io) server at `https://<your-duffel>/mcp`. In Duffel, open **Settings → Connect an AI assistant** to copy your URL and see steps for Claude, ChatGPT, Claude Code and others. When an assistant connects, Duffel shows a sign-in page; enter your household password to approve it. **Settings → Connect an AI assistant → Disconnect all** revokes every connected assistant.
+Duffel includes an [MCP](https://modelcontextprotocol.io) server at `https://<your-duffel>/mcp`. In Duffel, open **Settings → Connect an AI assistant** to copy your URL and see steps for Claude, ChatGPT, Claude Code and others. When an assistant connects, Duffel shows a sign-in page; enter your password to approve it. **Settings → Connect an AI assistant → Disconnect all** revokes every connected assistant.
 
 ![Settings → Connect an AI assistant, with the connector URL and set-up steps for Claude, ChatGPT and other apps](docs/screenshots/ai-assistant.png)
 
@@ -235,7 +235,7 @@ npm run deploy
 npm install
 cp .dev.vars.example .dev.vars    # then set APP_PASSWORD
 npm run db:migrate:local
-npm run db:seed:sample:local      # optional: a sample household
+npm run db:seed:sample:local      # optional: sample data
 npm run dev
 ```
 

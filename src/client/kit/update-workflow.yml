@@ -3,7 +3,7 @@
 # The button makes a plain copy (not a fork) and leaves this file out, so Duffel's Settings →
 # Updates offers to add it. Each run brings the latest Duffel into this repo and pushes; that
 # push is what Cloudflare deploys from. Duffel never deploys to your Cloudflare directly.
-# Your household's data lives in the database, not here, so it isn't touched.
+# Your data lives in the database, not here, so it isn't touched.
 name: Update Duffel
 
 on:

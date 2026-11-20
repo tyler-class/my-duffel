@@ -7,7 +7,7 @@ import { FieldRow, Pick, PersonDot, Sheet, TextArea, TextInput, cx } from './ui'
 // Fields every item editor shares (Pack's ItemSheet, Templates' TemplateItemSheet, Catalog's
 // ItemForm), so an item's group and notes are changed the same way wherever it appears.
 
-/** An item's group (category), picked from the household's groups. */
+/** An item's group (category), picked from the groups in use. */
 export function GroupField({
   id,
   value,
