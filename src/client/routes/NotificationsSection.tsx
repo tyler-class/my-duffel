@@ -46,7 +46,7 @@ export function NotificationsSection() {
     }
   }
 
-  const info = pushInfo({ badge: BADGE_MEANS });
+  const info = pushInfo({ badge: BADGE_MEANS, title: 'Duffel' });
   const blocker = state && pushBlocker(state, 'Duffel');
   const on = !!state?.on;
 
