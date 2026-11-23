@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, errorMessage } from '../lib/api';
 import { EXAMPLE_PROMPTS } from '@shared/examples';
+import { ALWAYS_ON_PROMPTS } from '../alwaysOn';
 import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
 import { load, save } from '../lib/storage';
@@ -13,6 +14,7 @@ import {
   SectionLabel,
   SlideToggle,
   SubHeading,
+  cx,
 } from '../components/ui';
 import { assistants, ASSISTANT_INTRO, CONNECTED_TEXT, signInNote } from '../kit/assistants';
 
@@ -123,7 +125,70 @@ export function ConnectAISection() {
       <Collapse open={examples}>
         <TryAsking />
       </Collapse>
+      <AlwaysOn />
     </div>
+  );
+}
+
+/**
+ * "Always-on agent prompts" (kit layout 5): collapsed; each prompt a row that opens to the full
+ * text, what the agent needs connected, and Copy prompt. One open at a time.
+ */
+function AlwaysOn() {
+  const [shown, setShown] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={shown}
+        onClick={() => setShown((v) => !v)}
+        className="flex w-full items-center gap-2 px-6 pt-5 pb-2 text-left text-sm font-semibold text-ink"
+      >
+        <Icon name="sparkle" size={15} className="text-accent" />
+        {CONNECTED_TEXT.alwaysOn}
+        <FoldChevron open={shown} size={14} />
+      </button>
+      <Collapse open={shown}>
+        <div className="flex flex-col gap-2 px-6 pb-2">
+          <p className="text-xs text-faint">{CONNECTED_TEXT.alwaysOnHint}</p>
+          {ALWAYS_ON_PROMPTS.map((a) => {
+            const on = open === a.id;
+            return (
+              <div key={a.id} className="rounded-xl border border-line bg-surface">
+                <button
+                  type="button"
+                  aria-expanded={on}
+                  onClick={() => setOpen(on ? null : a.id)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-sm font-semibold text-ink">{a.title}</span>
+                    <span className="text-xs text-soft">{a.summary}</span>
+                  </span>
+                  <Icon
+                    name="chevDown"
+                    size={14}
+                    className={cx('flex-none text-faint transition-transform', on && 'rotate-180')}
+                  />
+                </button>
+                {on && (
+                  <div className="px-4 pb-4">
+                    <pre className="max-h-80 overflow-auto rounded-lg bg-bg p-3 font-sans text-xs leading-relaxed whitespace-pre-wrap text-ink">
+                      {a.prompt}
+                    </pre>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs text-soft">{CONNECTED_TEXT.needs(a.needs)}</span>
+                      <Copy text={a.prompt} label={CONNECTED_TEXT.copyPrompt} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Collapse>
+    </>
   );
 }
 
