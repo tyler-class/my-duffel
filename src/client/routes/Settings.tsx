@@ -285,6 +285,8 @@ function UpdatesSection({
   const isSource = isSourceRepo(repo, UPSTREAM);
   const auto = autoUpdatesInfo('Duffel');
   const status = updateStatus('Duffel', __APP_VERSION__, latest.data, latest.isError);
+  // Set up and already on the latest version: nothing to update, so no Update now.
+  const upToDate = !!latest.data && !status.newer;
   const how = howUpdatesWork('Duffel');
   const shared = whatsShared('Duffel', USAGE_COUNTED, false);
 
@@ -343,18 +345,20 @@ function UpdatesSection({
           <>
             <div className="flex flex-wrap items-center gap-2">
               {setUp ? (
-                <a
-                  href={runUrl(repo)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cx(
-                    LINK_BUTTON,
-                    status.newer ? 'bg-accent text-accent-ink' : 'bg-chip text-ink',
-                  )}
-                >
-                  <Icon name="reset" size={16} />
-                  {UPDATE_TEXT.updateNow}
-                </a>
+                upToDate ? null : (
+                  <a
+                    href={runUrl(repo)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={cx(
+                      LINK_BUTTON,
+                      status.newer ? 'bg-accent text-accent-ink' : 'bg-chip text-ink',
+                    )}
+                  >
+                    <Icon name="reset" size={16} />
+                    {UPDATE_TEXT.updateNow}
+                  </a>
+                )
               ) : (
                 <a
                   href={setupUrl(repo, __SOURCE_BRANCH__)}
@@ -379,7 +383,8 @@ function UpdatesSection({
             <p className="text-xs text-faint">
               {setUp ? (
                 <>
-                  {UPDATE_TEXT.updateNowHint}{' '}
+                  {!upToDate && UPDATE_TEXT.updateNowHint}
+                  {!upToDate && ' '}
                   <a
                     href={workflowFileUrl(repo, __SOURCE_BRANCH__)}
                     target="_blank"
